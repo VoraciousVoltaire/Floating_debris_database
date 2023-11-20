@@ -303,15 +303,60 @@ plot(world_sp, col = "grey")
   mean_jars_cropped <- mean(values(jars_cropped), na.rm = T)
   mean_lang_cropped <- mean(values(lang_cropped), na.rm = T)
 
-  analysis_df <- data.frame(Colonies = c("Faroe islands", "Jan Mayen", "Bear island", 
+  analysis_df <- data.frame(Colonies = as.factor(c("Faroe islands", "Jan Mayen", "Bear island", 
                                          "Skjalfandi", "Eynehallow", "Alkefjellet",
                                          "Inishkea", "Little Saltee", "Isle of Canna",
-                                         "Jarsteinen", "Langanes"), 
+                                         "Jarsteinen", "Langanes")), 
                             Plastic_debris_mean = c(mean_faroe_cropped,  mean_jan_cropped,
                                                     mean_bear_cropped, mean_skja_cropped,
                                                     mean_eyne_cropped, mean_alke_cropped,
                                                     mean_inis_cropped, mean_litt_cropped,
                                                     mean_isle_cropped, mean_jars_cropped,
-                                                    mean_lang_cropped), 
-                            stringsAsFactors = T)  
-View(analysis_df)
+                                                    mean_lang_cropped))
+  # Ordering colony-wise exposure in an intact order
+  analysis_df$Colonies <- factor(analysis_df$Colonies, levels = analysis_df$Colonies)
+  str(analysis_df)
+
+# Notes ----
+# Less coverage for Bear islands, Alkefjellet
+
+# Plotting a basic ggplot for analysis_df
+
+library(ggplot2)
+analysis_df_bar_plot <- ggplot(data = analysis_df, aes(x = Colonies, y = Plastic_debris_mean)) +
+  geom_col(colour = "black", fill = "skyblue") +
+  scale_y_continuous(name = "Plastic debris mean") +
+  coord_cartesian(ylim = c(1.1,5)) +
+  theme_classic() +
+  theme(axis.line = element_line(colour = "grey"), axis.text.x = element_text(angle = 90))
+analysis_df_bar_plot
+
+# Analysis----
+
+# Checking sample size 
+sum(is.na(values(faroe_cropped) == F)) # 10
+sum(is.na(values(jan_cropped) == F))
+sum(is.na(values(bear_cropped) == F))
+sum(is.na(values(skja_cropped) == F))
+sum(is.na(values(eyne_cropped) == F))
+sum(is.na(values(alke_cropped) == F))
+sum(is.na(values(inis_cropped) == F))
+sum(is.na(values(litt_cropped) == F))
+sum(is.na(values(isle_cropped) == F))
+sum(is.na(values(jars_cropped) == F))
+sum(is.na(values(lang_cropped) == F))
+
+# Checking the normality assumption for each colony
+shapiro.test(values(faroe_cropped))
+shapiro.test(values(jan_cropped))
+shapiro.test(values(bear_cropped))
+shapiro.test(values(skja_cropped))
+shapiro.test(values(eyne_cropped)) # Normally distributed
+shapiro.test(values(alke_cropped)) # Normally distributed
+shapiro.test(values(inis_cropped)) # Normally distributed
+shapiro.test(values(litt_cropped)) # Normally distributed
+shapiro.test(values(isle_cropped)) # Normally distributed
+shapiro.test(values(jars_cropped))
+shapiro.test(values(lang_cropped))
+
+
