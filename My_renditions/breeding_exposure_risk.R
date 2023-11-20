@@ -1,0 +1,317 @@
+# My rendition of the plastic dataset code----
+
+#Import plastics data, average between three models
+#Convert into an Atlantic-centred plastic density raster
+#Win Cowger & Beth Clark 2021
+rm(list=ls()) 
+
+# Load packages and data ####
+library(sp)
+library(raster)
+# library(rgdal) 
+library(dplyr)
+library(RColorBrewer)
+library(sf)
+
+sessionInfo()
+#R version 4.1.2 (2021-11-01)
+#Platform: x86_64-w64-mingw32/x64 (64-bit)
+#Running under: Windows 10 x64 (build 19045)
+
+#Matrix products: default
+
+#locale:
+#[1] LC_COLLATE=English_United Kingdom.1252 
+#[2] LC_CTYPE=English_United Kingdom.1252   
+#[3] LC_MONETARY=English_United Kingdom.1252
+#[4] LC_NUMERIC=C                           
+#[5] LC_TIME=English_United Kingdom.1252    
+
+#attached base packages:
+#[1] stats     graphics  grDevices utils     datasets  methods  
+#[7] base     
+
+#other attached packages:
+# [1] RColorBrewer_1.1-2 dplyr_1.0.8        rgdal_1.4-8       
+#[4] raster_3.1-5       sp_1.5-0          
+
+#loaded via a namespace (and not attached):
+#[1] Rcpp_1.0.8       rstudioapi_0.13  magrittr_2.0.2   tidyselect_1.1.2
+#[5] lattice_0.20-45  R6_2.5.1         rlang_1.0.6      fansi_1.0.2     
+#[9] tools_4.1.2      grid_4.1.2       utf8_1.2.2       cli_3.3.0       
+#[13] DBI_1.1.2        ellipsis_0.3.2   assertthat_0.2.1 tibble_3.1.6    
+#[17] lifecycle_1.0.3  crayon_1.5.0     purrr_0.3.4      vctrs_0.3.8     
+#[21] codetools_0.2-18 glue_1.6.2       compiler_4.1.2   pillar_1.7.0    
+#[25] generics_0.1.2   pkgconfig_2.0.3 
+
+## specify/create directories
+dir.create("outputs/")
+
+#Data to read in ----
+Lebreton <- as.matrix(read.csv("input_data/plastics_data/lebretonmodel_abundance.csv", header = F))
+Maximenko <- as.matrix(read.csv("input_data/plastics_data/maximenkomodel_abundance.csv", header = F))
+VanSeb <- as.matrix(read.csv("input_data/plastics_data/vansebillemodel_abundance.csv", header = F))
+
+#Data Cleanup ----
+df <- data.frame(van = as.vector(VanSeb), max = as.vector(Maximenko), leb = as.vector(Lebreton))
+
+#Geomean
+
+# My addition 1---- removed 10 to the power in the object Average
+Average <- rowMeans(mutate_all(df, function(x) log10(x+1)) ,na.rm = T)
+
+dim(Average) <- c(181, 361)
+
+Ave <- raster(Average, xmn = 1, xmx= 361, ymn=-90, ymx=90, 
+              crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+
+AveRaster_1 <- raster :: shift(rotate(raster(Average, 
+                                             xmn = 0, xmx= 360, ymn=-90, ymx=90, 
+                                             crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")), dx=0.5)
+
+AveRaster_2 <- raster :: rotate(raster(Average, 
+                                       xmn = 0, xmx= 360, ymn=-90, ymx=90, 
+                                       crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+# My addition 2---- removed log
+plot(Ave)
+plot(AveRaster_1) # isn't required is my point
+plot(AveRaster_2)
+
+#After rotating to atlantic-centred, there is
+#a column in the centre with incorrect values
+#corrected below
+
+plastics <- AveRaster_1
+
+r178 <- plastics[cellFromCol(plastics,178)]
+cols <- as.data.frame(r178)
+cols$r179 <- plastics[cellFromCol(plastics,179)]
+cols$r180 <- plastics[cellFromCol(plastics,180)]
+
+cols$r182 <- plastics[cellFromCol(plastics,182)]
+cols$r183 <- plastics[cellFromCol(plastics,183)]
+cols$r184 <- plastics[cellFromCol(plastics,184)]
+
+cols$mean <- rowMeans(cols,na.rm = T)
+
+cols$mean <- ifelse(cols$mean == "NaN",NA,cols$mean)
+cols$mean <- ifelse(is.na(cols$r180) & is.na(cols$r182),NA,cols$mean)
+
+plastics[cellFromCol(plastics,181)] <- cols$mean
+
+plot(plastics)
+
+#save the raster
+raster_name <- "outputs/00_PlasticsRaster.tif"
+writeRaster(plastics, filename = raster_name,
+            format="GTiff", overwrite=TRUE)
+
+#Plot difference in coverage between the three models ####
+
+#Read in land file for visualisation:
+#Natural Earth land 1:10m polygons version 5.1.1 
+#downloaded from www.naturalearthdata.com/
+
+# My addition 3---- rgeoda isn't available in my current version of R version 4.3.1
+library(spData)
+world_sp <- as(world,"Spatial")
+
+# My addition 4----
+# # Isn't required?
+# land <- rgdal::readOGR(dsn = "input_data/baselayer", layer = "ne_10m_land") 
+# 
+# land <- readOGR(dsn = "input_data/baselayer", layer = "ne_10m_land") 
+
+
+VanSeb_01 <- ifelse(VanSeb>0,1,0)
+VanSeb_01 <- ifelse(is.na(VanSeb_01),0,VanSeb_01)
+
+Lebreton_01 <- ifelse(Lebreton>0,1,0)
+Lebreton_01 <- ifelse(is.na(Lebreton_01),0,Lebreton_01)
+
+Maximenko_01 <- ifelse(Maximenko>0,1,0)
+Maximenko_01 <- ifelse(is.na(Maximenko_01),0,Maximenko_01)
+
+sum01 <- VanSeb_01+Lebreton_01+Maximenko_01
+sum01_r <- shift(rotate(raster(sum01, 
+                               xmn = 0, xmx= 360, ymn=-90, ymx=90, 
+                               crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")), 
+                 dx=0.5)
+
+sum01_r <- raster :: shift(rotate(raster(sum01, 
+                                         xmn = 0, xmx= 360, ymn=-90, ymx=90, 
+                                         crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")), 
+                           by=0.5)
+
+yelblus <- c(brewer.pal(n = 5, name = "YlGnBu"),"#00172e")
+
+cols_nmods <- c("#F2F3F400",yelblus[3:5])
+
+
+plot(sum01_r,col=cols_nmods,breaks = c(-1:3))
+
+# My addition 5----
+plot(world_sp, col="grey75", add=T)
+
+png("outputs/00_plastics_model_coverage.png", 
+    width=1379,height=750)
+plot(sum01_r, col=cols_nmods, breaks = c(-1:3))
+plot(land, col="grey75", add=T)
+dev.off()
+
+
+# To add: latitudes and longitudes for each colony; set up a radius - 
+# first literature survey to find out colony-specific breeding radii 
+# set up specific rasters- find out overlapping regions between the two
+# find some methods of aggregations - geometric mean again sounds good 
+
+library(spData)
+
+# Loading in world shape file
+
+world_sp <- as(world,"Spatial")
+world_sf <- st_as_sf(world_sp)
+plot(world_sp, col = "grey")
+  
+# Loading in coordinates of colonies
+
+  faroe_coords_pts <- st_point(c(6.798,61.950))
+  jan_coords_pts <- st_point(c(8.718, 70.921))
+  bear_coords_pts <- st_point(c(-18.956, 74.503))
+  skja_coords_pts <- st_point(c(17.410, 65.990))
+  eyne_coords_pts <- st_point(c(3.115, 59.142))  
+  alke_coords_pts <- st_point(c(-18.459, 79.585))  
+  inis_coords_pts <- st_point(c(10.204, 54.128))  
+  litt_coords_pts <- st_point(c(6.585, 52.136))  
+  isle_coords_pts <- st_point(c(6.559, 57.059))  
+  jars_coords_pts <- st_point(c(5.174, 59.150))  
+  lang_coords_pts <- st_point(c(14.650, 66.350))  
+
+# Setting up geometry for each colony
+  
+  faroe_geometry <- st_sfc(faroe_coords_pts, crs = "EPSG:4326")
+  jan_geometry <- st_sfc(jan_coords_pts, crs = "EPSG:4326")
+  bear_geometry <- st_sfc(bear_coords_pts, crs = "EPSG:4326")
+  skja_geometry <- st_sfc(skja_coords_pts, crs = "EPSG:4326")
+  eyne_geometry <- st_sfc(eyne_coords_pts, crs = "EPSG:4326")
+  alke_geometry <- st_sfc(alke_coords_pts, crs = "EPSG:4326")
+  inis_geometry <- st_sfc(inis_coords_pts, crs = "EPSG:4326")
+  litt_geometry <- st_sfc(litt_coords_pts, crs = "EPSG:4326")
+  isle_geometry <- st_sfc(isle_coords_pts, crs = "EPSG:4326")
+  jars_geometry <- st_sfc(jars_coords_pts, crs = "EPSG:4326")
+  lang_geometry <- st_sfc(lang_coords_pts, crs = "EPSG:4326")
+  
+# Setting up non-geographical aspect for each colony
+  
+  faroe_nongeographical_attributes <- data.frame(name = "Faroe Islands")
+  jan_nongeographical_attributes <- data.frame(name = "Jan Mayen")  
+  bear_nongeographical_attributes <- data.frame(name = "Bear Island")
+  skja_nongeographical_attributes <- data.frame(name = "Skjalfandi")                                                  
+  eyne_nongeographical_attributes <- data.frame(name = "Eynhallow")      
+  alke_nongeographical_attributes <- data.frame(name = "Alkefjellet")
+  inis_nongeographical_attributes <- data.frame(name = "Inishkea")  
+  litt_nongeographical_attributes <- data.frame(name = "Little Saltee")  
+  isle_nongeographical_attributes <- data.frame(name = "Isle of Canna")  
+  jars_nongeographical_attributes <- data.frame(name = "Jarsteinen")  
+  lang_nongeographical_attributes <- data.frame(name = "Langanes")  
+
+# Creating an sf object
+  
+  faroe_sf <- st_sf(faroe_nongeographical_attributes, geometry = faroe_geometry)
+  jan_sf <- st_sf(jan_nongeographical_attributes, geometry = jan_geometry)
+  bear_sf <- st_sf(bear_nongeographical_attributes, geometry = bear_geometry)
+  skja_sf <- st_sf(skja_nongeographical_attributes, geometry = skja_geometry)
+  eyne_sf <- st_sf(eyne_nongeographical_attributes, geometry = eyne_geometry)
+  alke_sf <- st_sf(alke_nongeographical_attributes, geometry = alke_geometry)
+  inis_sf <- st_sf(inis_nongeographical_attributes, geometry = inis_geometry)
+  litt_sf <- st_sf(litt_nongeographical_attributes, geometry = litt_geometry)
+  isle_sf <- st_sf(isle_nongeographical_attributes, geometry = isle_geometry)
+  jars_sf <- st_sf(jars_nongeographical_attributes, geometry = jars_geometry)
+  lang_sf <- st_sf(lang_nongeographical_attributes, geometry = lang_geometry)
+
+# Overlaying colonies atop plastic dataset
+  
+  plot(plastics)
+  plot(st_geometry(faroe_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  plot(st_geometry(jan_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  plot(st_geometry(bear_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  plot(st_geometry(skja_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  plot(st_geometry(eyne_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  plot(st_geometry(alke_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  plot(st_geometry(inis_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  plot(st_geometry(litt_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  plot(st_geometry(isle_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  plot(st_geometry(jars_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  overlap_plot <- plot(st_geometry(lang_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  
+  raster_name_2 <- "outputs/overlap_plot.tif"
+  
+# Setting up a buffer of 250 km for each colony
+  
+  faroe_buff <- st_buffer(faroe_sf, dist = 250000)
+  jan_buff <- st_buffer(jan_sf, dist = 250000)
+  bear_buff <- st_buffer(bear_sf, dist = 250000)
+  skja_buff <- st_buffer(skja_sf, dist = 250000)
+  eyne_buff <- st_buffer(eyne_sf, dist = 250000)
+  alke_buff <- st_buffer(alke_sf, dist = 250000)
+  inis_buff <- st_buffer(inis_sf, dist = 250000)
+  litt_buff <- st_buffer(litt_sf, dist = 250000)
+  isle_buff <- st_buffer(isle_sf, dist = 250000)
+  jars_buff <- st_buffer(jars_sf, dist = 250000)
+  lang_buff <- st_buffer(lang_sf, dist = 250000)
+  
+# Replacing overlap_plot with buff_overlap_plot
+  
+  plot(plastics)
+  plot(st_geometry(faroe_buff), col = "blue", add = T)
+  plot(st_geometry(jan_buff), col = "blue", add = T)
+  plot(st_geometry(bear_buff), col = "blue", add = T)
+  plot(st_geometry(skja_buff), col = "blue", add = T)
+  plot(st_geometry(eyne_buff), col = "blue", add = T)
+  plot(st_geometry(alke_buff), col = "blue", add = T)
+  plot(st_geometry(inis_buff), col = "blue", add = T)
+  plot(st_geometry(litt_buff), col = "blue", add = T)
+  plot(st_geometry(isle_buff), col = "blue", add = T)
+  plot(st_geometry(jars_buff), col = "blue", add = T)
+  buff_overlap_plot <- plot(st_geometry(lang_buff), col = "blue", add = T)
+  
+# Cropping colony-specific rasters from plastics dataset
+  
+  faroe_cropped <- crop(plastics, faroe_buff)
+  jan_cropped <- crop(plastics, jan_buff)
+  bear_cropped <- crop(plastics, bear_buff)
+  skja_cropped <- crop(plastics, skja_buff)
+  eyne_cropped <- crop(plastics, eyne_buff)
+  alke_cropped <- crop(plastics, alke_buff)
+  inis_cropped <- crop(plastics, inis_buff)  
+  litt_cropped <- crop(plastics, litt_buff)  
+  isle_cropped <- crop(plastics, isle_buff)  
+  jars_cropped <- crop(plastics, jars_buff)  
+  lang_cropped <- crop(plastics, lang_buff)  
+
+# Calculating means of values inside each colony-specific raster
+  
+  mean_faroe_cropped <- mean(values(faroe_cropped), na.rm = T)
+  mean_jan_cropped <- mean(values(jan_cropped), na.rm = T)
+  mean_bear_cropped <- mean(values(bear_cropped), na.rm = T)
+  mean_skja_cropped <- mean(values(skja_cropped), na.rm = T)
+  mean_eyne_cropped <- mean(values(eyne_cropped), na.rm = T)
+  mean_alke_cropped <- mean(values(alke_cropped), na.rm = T)
+  mean_inis_cropped <- mean(values(inis_cropped), na.rm = T)
+  mean_litt_cropped <- mean(values(litt_cropped), na.rm = T)
+  mean_isle_cropped <- mean(values(isle_cropped), na.rm = T)
+  mean_jars_cropped <- mean(values(jars_cropped), na.rm = T)
+  mean_lang_cropped <- mean(values(lang_cropped), na.rm = T)
+
+  analysis_df <- data.frame(Colonies = c("Faroe islands", "Jan Mayen", "Bear island", 
+                                         "Skjalfandi", "Eynehallow", "Alkefjellet",
+                                         "Inishkea", "Little Saltee", "Isle of Canna",
+                                         "Jarsteinen", "Langanes"), 
+                            Plastic_debris_mean = c(mean_faroe_cropped,  mean_jan_cropped,
+                                                    mean_bear_cropped, mean_skja_cropped,
+                                                    mean_eyne_cropped, mean_alke_cropped,
+                                                    mean_inis_cropped, mean_litt_cropped,
+                                                    mean_isle_cropped, mean_jars_cropped,
+                                                    mean_lang_cropped), 
+                            stringsAsFactors = T)  
+View(analysis_df)
