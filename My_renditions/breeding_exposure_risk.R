@@ -288,7 +288,26 @@ plot(world_sp, col = "grey")
   isle_cropped <- crop(plastics, isle_buff)  
   jars_cropped <- crop(plastics, jars_buff)  
   lang_cropped <- crop(plastics, lang_buff)  
+  some_vector <- c(faroe_cropped, jan_cropped, bear_cropped, skja_cropped,
+                   eyne_cropped, alke_cropped, inis_cropped, litt_cropped, 
+                   isle_cropped, jars_cropped, lang_cropped)
+summary(some_vector)
 
+# Creating a values' vector
+  # value_1 <- values(faroe_cropped) 
+  # value_2 <- values(jan_cropped) 
+  # value_3 <- values(bear_cropped) 
+  # value_4 <- values(skja_cropped) 
+  # value_5 <- values(eyne_cropped) 
+  # value_6 <- values(alke_cropped) 
+  # value_7 <- values(inis_cropped) 
+  # value_8 <- values(litt_cropped) 
+  # value_9 <- values(isle_cropped) 
+  # value_10 <- values(jars_cropped) 
+  # value_11 <- values(lang_cropped) 
+  # values_list <- list(c(value_1, value_2, value_3, value_4, value_5, value_6,
+  #                    value_7, value_8, value_9, value_10, value_11))
+  
 # Calculating means of values inside each colony-specific raster
   
   mean_faroe_cropped <- mean(values(faroe_cropped), na.rm = T)
@@ -328,23 +347,58 @@ analysis_df_bar_plot <- ggplot(data = analysis_df, aes(x = Colonies, y = Plastic
   scale_y_continuous(name = "Plastic debris mean") +
   coord_cartesian(ylim = c(1.1,5)) +
   theme_classic() +
-  theme(axis.line = element_line(colour = "grey"), axis.text.x = element_text(angle = 90))
+  theme(axis.line = element_line(colour = "grey"), axis.text.x = element_text(angle = 90)) 
 analysis_df_bar_plot
 
+# Defining a standard deviation column in analysis_df for error bars in box-plot
+
+sd1 <- sd(values(faroe_cropped), na.rm = T)
+sd2 <- sd(values(jan_cropped), na.rm = T)
+sd3 <- sd(values(bear_cropped), na.rm = T)
+sd4 <- sd(values(skja_cropped), na.rm = T)
+sd5 <- sd(values(eyne_cropped), na.rm = T)
+sd6 <- sd(values(alke_cropped), na.rm = T)
+sd7 <- sd(values(inis_cropped), na.rm = T)
+sd8 <- sd(values(litt_cropped), na.rm = T)
+sd9 <- sd(values(isle_cropped), na.rm = T)
+sd10 <- sd(values(jars_cropped), na.rm = T)
+sd11 <- sd(values(lang_cropped), na.rm = T)
+
+analysis_df_2 <- cbind(analysis_df, Standard_devation = c(sd1, sd2, sd3, sd4, sd5, sd6, sd7, 
+                                                          sd8, sd9, sd10, sd11))
+View(analysis_df_2)
+
+# Trying out a 'box-plot'
+analysis_df_box_plot <- ggplot(data = analysis_df_2, aes(x = Colonies, y = Plastic_debris_mean,
+                               ymin = Plastic_debris_mean - Standard_devation,
+                               ymax = Plastic_debris_mean + Standard_devation)) +
+  scale_y_continuous(name = "Plastic debris mean") +
+  geom_boxplot() +
+  theme_classic() +
+  theme(axis.line = element_line(colour = "grey"), axis.text.x = element_text(angle = 90)) +
+  geom_errorbar()
+analysis_df_box_plot
+ 
 # Analysis----
 
 # Checking sample size 
-sum(is.na(values(faroe_cropped) == F)) # 10
-sum(is.na(values(jan_cropped) == F))
-sum(is.na(values(bear_cropped) == F))
-sum(is.na(values(skja_cropped) == F))
-sum(is.na(values(eyne_cropped) == F))
-sum(is.na(values(alke_cropped) == F))
-sum(is.na(values(inis_cropped) == F))
-sum(is.na(values(litt_cropped) == F))
-sum(is.na(values(isle_cropped) == F))
-sum(is.na(values(jars_cropped) == F))
-sum(is.na(values(lang_cropped) == F))
+faroe_sum <- sum(!is.na(values(faroe_cropped))) # 30
+jan_sum <- sum(!is.na(values(jan_cropped))) # 56
+bear_sum <- sum(!is.na(values(bear_cropped))) # 24
+skja_sum <- sum(!is.na(values(skja_cropped))) # 18
+eyne_sum <- sum(!is.na(values(eyne_cropped))) # 31
+alke_sum <- sum(!is.na(values(alke_cropped))) # 5
+inis_sum <- sum(!is.na(values(inis_cropped))) # 26
+litt_sum <- sum(!is.na(values(litt_cropped))) # 20
+isle_sum <- sum(!is.na(values(isle_cropped))) # 26
+jars_sum <- sum(!is.na(values(jars_cropped))) # 24
+lang_sum <- sum(!is.na(values(lang_cropped))) # 40
+
+# Adding sample size to analysis_df
+analysis_df <- cbind(analysis_df, Sample_size = c(faroe_sum, jan_sum, bear_sum, skja_sum, eyne_sum,
+                                    alke_sum, inis_sum, litt_sum, isle_sum, jars_sum,
+                                    lang_sum))
+View(analysis_df)
 
 # Checking the normality assumption for each colony
 shapiro.test(values(faroe_cropped))
@@ -359,4 +413,53 @@ shapiro.test(values(isle_cropped)) # Normally distributed
 shapiro.test(values(jars_cropped))
 shapiro.test(values(lang_cropped))
 
+# Performing the non-parametric Kruskal Wallis test
+# First create a new dataframe that contains two columns: plastic abundance value
+# and colony name (like group)
+
+faroe_value_df <- na.omit(data.frame(Colony_name = rep("Faroe islands", length(values(faroe_cropped))), 
+                                     Values = values(faroe_cropped)))
+jan_value_df <- na.omit(data.frame(Colony_name = rep("Jan Mayen", length(values(jan_cropped))), 
+                                     Values = values(jan_cropped)))
+bear_value_df <- na.omit(data.frame(Colony_name = rep("Bear island", length(values(bear_cropped))), 
+                                     Values = values(bear_cropped)))
+skja_value_df <- na.omit(data.frame(Colony_name = rep("Skjalfandi", length(values(skja_cropped))), 
+                                     Values = values(skja_cropped)))
+eyne_value_df <- na.omit(data.frame(Colony_name = rep("Eynehallow", length(values(eyne_cropped))), 
+                                     Values = values(eyne_cropped)))
+alke_value_df <- na.omit(data.frame(Colony_name = rep("Alkefjellet", length(values(alke_cropped))), 
+                                     Values = values(alke_cropped)))
+inis_value_df <- na.omit(data.frame(Colony_name = rep("Inishkea", length(values(inis_cropped))), 
+                                     Values = values(inis_cropped)))
+litt_value_df <- na.omit(data.frame(Colony_name = rep("Little Saltee", length(values(litt_cropped))), 
+                                     Values = values(litt_cropped)))
+isle_value_df <- na.omit(data.frame(Colony_name = rep("Isle of Canna", length(values(isle_cropped))), 
+                                     Values = values(isle_cropped)))
+jars_value_df <- na.omit(data.frame(Colony_name = rep("Jarsteinen", length(values(jars_cropped))), 
+                                     Values = values(jars_cropped)))
+lang_value_df <- na.omit(data.frame(Colony_name = rep("Langanes", length(values(lang_cropped))), 
+                                     Values = values(lang_cropped)))
+
+merged_value_df <- rbind(faroe_value_df, jan_value_df, bear_value_df, skja_value_df,
+                         eyne_value_df, alke_value_df, inis_value_df, litt_value_df,
+                         isle_value_df, jars_value_df, lang_value_df)
+View(merged_value_df)           
+
+kruskal.test(Values ~ Colony_name, data = merged_value_df)
+pairwise.wilcox.test(merged_value_df$Values, merged_value_df$Colony_name,
+                     p.adjust.method = "BH")
+
+# Results show that Jarsteinen-Eynehallow, Jarsteinen-Faroe islands, 
+# Little-Saltee-Inishkea, Skjalfandi-Eynehallow, Skjalfandi-Faroe islands,
+# Jarsteinen-Jan Mayen, Langanes-Isle of Canna, Skjalfandi-Isle of Canna,
+# Skjalfandi-Jan Mayen, Skjalfandi-Jarsteinen and Skjalfandi-Langanes aren't 
+# significantly different; i.e 11 out of 55 total pairs
+
+# Now, performing a non-parametric equivalent of ANCOVA on the same dataset 
+# controlling for sample size to see if the significances hold true. Also
+# don't forget to apply multiple-testing correction
+
+install.packages("npsm")
+install.packages("Rfit")
+install.packages("fANCOVA")
 
