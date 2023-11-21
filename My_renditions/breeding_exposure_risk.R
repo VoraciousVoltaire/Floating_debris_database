@@ -418,27 +418,27 @@ shapiro.test(values(lang_cropped))
 # and colony name (like group)
 
 faroe_value_df <- na.omit(data.frame(Colony_name = rep("Faroe islands", length(values(faroe_cropped))), 
-                                     Values = values(faroe_cropped)))
+                                     Values = values(faroe_cropped), Sample_size = 30))
 jan_value_df <- na.omit(data.frame(Colony_name = rep("Jan Mayen", length(values(jan_cropped))), 
-                                     Values = values(jan_cropped)))
+                                     Values = values(jan_cropped), Sample_size = 56))
 bear_value_df <- na.omit(data.frame(Colony_name = rep("Bear island", length(values(bear_cropped))), 
-                                     Values = values(bear_cropped)))
+                                     Values = values(bear_cropped), Sample_size = 24))
 skja_value_df <- na.omit(data.frame(Colony_name = rep("Skjalfandi", length(values(skja_cropped))), 
-                                     Values = values(skja_cropped)))
+                                     Values = values(skja_cropped), Sample_size = 18))
 eyne_value_df <- na.omit(data.frame(Colony_name = rep("Eynehallow", length(values(eyne_cropped))), 
-                                     Values = values(eyne_cropped)))
+                                     Values = values(eyne_cropped), Sample_size = 31))
 alke_value_df <- na.omit(data.frame(Colony_name = rep("Alkefjellet", length(values(alke_cropped))), 
-                                     Values = values(alke_cropped)))
+                                     Values = values(alke_cropped), Sample_size = 5))
 inis_value_df <- na.omit(data.frame(Colony_name = rep("Inishkea", length(values(inis_cropped))), 
-                                     Values = values(inis_cropped)))
+                                     Values = values(inis_cropped), Sample_size = 26))
 litt_value_df <- na.omit(data.frame(Colony_name = rep("Little Saltee", length(values(litt_cropped))), 
-                                     Values = values(litt_cropped)))
+                                     Values = values(litt_cropped), Sample_size = 20))
 isle_value_df <- na.omit(data.frame(Colony_name = rep("Isle of Canna", length(values(isle_cropped))), 
-                                     Values = values(isle_cropped)))
+                                     Values = values(isle_cropped), Sample_size = 26))
 jars_value_df <- na.omit(data.frame(Colony_name = rep("Jarsteinen", length(values(jars_cropped))), 
-                                     Values = values(jars_cropped)))
+                                     Values = values(jars_cropped), Sample_size = 24))
 lang_value_df <- na.omit(data.frame(Colony_name = rep("Langanes", length(values(lang_cropped))), 
-                                     Values = values(lang_cropped)))
+                                     Values = values(lang_cropped), Sample_size = 40))
 
 merged_value_df <- rbind(faroe_value_df, jan_value_df, bear_value_df, skja_value_df,
                          eyne_value_df, alke_value_df, inis_value_df, litt_value_df,
@@ -463,3 +463,53 @@ install.packages("npsm")
 install.packages("Rfit")
 install.packages("fANCOVA")
 
+# Plot to tease out something- would colouring by covariate help see any trends?
+
+library(ggplot2)
+covariate_plot <- ggplot(merged_value_df, aes(x = Colony_name, y = Values, colour = Sample_size)) + 
+  geom_point() +
+  theme_classic() +
+  xlab("Colony name") +
+  ylab("Plastic debris values") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  ggtitle("Covariate trial", subtitle = "nope")
+ covariate_plot 
+
+# Assuming what I did was wrong so far (interpreting normality in variables rather than the residuals)
+# I'm now trying to plot residual plots from a generalized linear model 
+ 
+trial_model <- lm(Values ~ Colony_name, data = merged_value_df)
+res <- resid(trial_model)
+plot(fitted(trial_model), res)
+abline(0,0)
+qqnorm(res)  
+qqline(res)  
+plot(density(res))
+
+# This shows that parametric tests can be applied here? I need more reading on this. I've learnt
+# not to associate non-parametric and parametric with non-normal and normal respectively but I'm
+# having a hard time interpreting tests. They say non-parametric tests sometimes have more assumptions than
+# parametric tests? I used to think that just checking normality of data (residuals more technically,
+# but I used to think that Shapiro-Wilk test takes care of that and directly tells us whether your 
+# data is normal or not based on its residuals- have to check exactly what it is that it does), 
+# no heteroskedasticity (Levene's test) and independence of independent variables (sounds funny)
+# were the only three assumptions for parametric tests and that if your data violates even one of 'em
+# it's straight down to non-parametric tests. Turns out, no tis not so easy and minor violations (depends 
+# on the category violated) are permissible to some extent. So I'm trying parametric tests now because
+# the density plot clearly resembled a bell-shaped curve
+
+# ANCOVA assumptions: 1) Independence of treatment (plastic debris abundance- proportional to
+# exposure- in this case, and covariate- sample size in this case; 2) Homogenity of variance 
+
+# Second assumption testing
+library(car)
+leveneTest(Values~Colony_name, data = merged_value_df)
+# Thus even after transforming (plastic debris abundance data is log transformed), ANCOVA's 
+# second assumption is violated; hence doing the next part just for practice
+
+ancova_model <- aov(Values ~ Colony_name + Sample_size, data = merged_value_df)
+Anova(ancova_model) # didn't mention the type ("III" in the example) because I don't know what it does
+# Controlling for sample size, values and colony name still show a statistically significant
+# relation, hence different colonies have different plastic exposures never mind their sample
+# sizes but ancova can't be performed here technically because its second assumption is violated.
+# I don't know what I'll do at this point, need to read some basics for now.
