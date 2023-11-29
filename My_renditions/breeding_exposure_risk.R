@@ -464,6 +464,7 @@ analysis_df_seom
 # Analysis----
 
 # Checking sample size 
+
 # faroe_sum <- sum(!is.na(values(faroe_cropped))) # 30
 # jan_sum <- sum(!is.na(values(jan_cropped))) # 56
 # bear_sum <- sum(!is.na(values(bear_cropped))) # 24
@@ -508,21 +509,19 @@ View(analysis_df_2)
 # shapiro.test(values(lang_cropped))
 
 library(ggpubr)
-par(mfrow = c(3,5))
-density_plots <- vector("list", 11)
-density_plots[[i]] <- for(i in 1:11){
-  print(ggdensity(na.omit(values(crop(plastics, colony_buff_refined[i,2]))), 
-          main = "Density plot",
-          xlab = "Plastic debris value")
-  )
-}
+dplot <- vector('list', 11)
+ for(i in 1:11){ 
+   dplot[[i]] <- local({
+     i <- i
+     print(ggdensity(na.omit(values(crop(plastics, colony_buff_refined[i,2])))), 
+                     main = "Density plot",
+                     xlab = "Plastic debris value")})
+ }
 library(gridExtra)
-grid.arrange(plot_1, plot_2, plot_3, plot_4, plot_5, plot_6, plot_7, plot_8,
-             plot_9, plot_10, plot_11, ncol = 5, nrow = 3)
-
-# plot_1 <- ggdensity(values(crop(plastics, colony_buff_refined[1,2])), 
-#           main = "Density plot",
-#           xlab = "Plastic debris value")
+for(j in 1:11){
+  grid.arrange(grobs = dplot, ncol = 5, nrow = 3)
+}
+         
 # plot_2 <- ggdensity(values(crop(plastics, colony_buff_refined[2,2])), 
 #                     main = "Density plot",
 #                     xlab = "Plastic debris value")
@@ -573,9 +572,26 @@ for(i in 1:11){print(shapiro_result[[i]])}
 # 10: Normal
 # 11: Non-normal
 
-Sample_size <- as.vector(unlist(ss_result))
-analysis_df_2 <- cbind(analysis_df, Sample_size)
-View(analysis_df_2)
+# QQ plots ----
+library(ggpubr)
+library(ggplot2)
+qplot <- vector('list', 11)
+for(i in 1:11){ 
+  qplot[[i]] <- local
+  (
+    {
+       i <- i
+       print(ggqqplot(na.omit(values(crop(plastics, colony_buff_refined[i,2])))), 
+       main = "Density plot")
+    }
+  )
+}
+library(gridExtra)
+for(j in 1:11){
+  grid.arrange(grobs = qplot, ncol = 5, nrow = 3)
+}
+
+
 
 # Performing the non-parametric Kruskal Wallis test
 # First create a new dataframe that contains two columns: plastic abundance value
