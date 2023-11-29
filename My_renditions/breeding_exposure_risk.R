@@ -166,6 +166,7 @@ dev.off()
 # find some methods of aggregations - geometric mean again sounds good 
 
 library(spData)
+library(sf)
 
 # Loading in world shape file
 
@@ -173,125 +174,183 @@ world_sp <- as(world,"Spatial")
 world_sf <- st_as_sf(world_sp)
 plot(world_sp, col = "grey")
   
+
+# Efficient script----
+
+install.packages("googlesheets4")
+library(googlesheets4)
+refined_datasheet <- read_sheet("https://docs.google.com/spreadsheets/d/1bVSxqMkHXXxFcxjekMXMv5nfoKfJ5yn6y5UztVNUgJY/edit#gid=0")
+medlat = median(refined_datasheet$Latitude)
+medlon = median(refined_datasheet$Longitude)
+proj.laea = paste("+proj=laea +lat_0=",round(medlat), " +lon_0=",round(medlon)," +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=km ", sep="")
+library(sf)
+spatial_obj <- st_as_sf(refined_datasheet, coords = c("Longitude", "Latitude"), crs = 4326)
+spatial_laea <- st_transform(spatial_obj, crs = crs(proj.laea))
+
 # Loading in coordinates of colonies
-
-  faroe_coords_pts <- st_point(c(6.798,61.950))
-  jan_coords_pts <- st_point(c(8.718, 70.921))
-  bear_coords_pts <- st_point(c(-18.956, 74.503))
-  skja_coords_pts <- st_point(c(17.410, 65.990))
-  eyne_coords_pts <- st_point(c(3.115, 59.142))  
-  alke_coords_pts <- st_point(c(-18.459, 79.585))  
-  inis_coords_pts <- st_point(c(10.204, 54.128))  
-  litt_coords_pts <- st_point(c(6.585, 52.136))  
-  isle_coords_pts <- st_point(c(6.559, 57.059))  
-  jars_coords_pts <- st_point(c(5.174, 59.150))  
-  lang_coords_pts <- st_point(c(14.650, 66.350))  
-
-# Setting up geometry for each colony
-  
-  faroe_geometry <- st_sfc(faroe_coords_pts, crs = "EPSG:4326")
-  jan_geometry <- st_sfc(jan_coords_pts, crs = "EPSG:4326")
-  bear_geometry <- st_sfc(bear_coords_pts, crs = "EPSG:4326")
-  skja_geometry <- st_sfc(skja_coords_pts, crs = "EPSG:4326")
-  eyne_geometry <- st_sfc(eyne_coords_pts, crs = "EPSG:4326")
-  alke_geometry <- st_sfc(alke_coords_pts, crs = "EPSG:4326")
-  inis_geometry <- st_sfc(inis_coords_pts, crs = "EPSG:4326")
-  litt_geometry <- st_sfc(litt_coords_pts, crs = "EPSG:4326")
-  isle_geometry <- st_sfc(isle_coords_pts, crs = "EPSG:4326")
-  jars_geometry <- st_sfc(jars_coords_pts, crs = "EPSG:4326")
-  lang_geometry <- st_sfc(lang_coords_pts, crs = "EPSG:4326")
-  
-# Setting up non-geographical aspect for each colony
-  
-  faroe_nongeographical_attributes <- data.frame(name = "Faroe Islands")
-  jan_nongeographical_attributes <- data.frame(name = "Jan Mayen")  
-  bear_nongeographical_attributes <- data.frame(name = "Bear Island")
-  skja_nongeographical_attributes <- data.frame(name = "Skjalfandi")                                                  
-  eyne_nongeographical_attributes <- data.frame(name = "Eynhallow")      
-  alke_nongeographical_attributes <- data.frame(name = "Alkefjellet")
-  inis_nongeographical_attributes <- data.frame(name = "Inishkea")  
-  litt_nongeographical_attributes <- data.frame(name = "Little Saltee")  
-  isle_nongeographical_attributes <- data.frame(name = "Isle of Canna")  
-  jars_nongeographical_attributes <- data.frame(name = "Jarsteinen")  
-  lang_nongeographical_attributes <- data.frame(name = "Langanes")  
-
-# Creating an sf object
-  
-  faroe_sf <- st_sf(faroe_nongeographical_attributes, geometry = faroe_geometry)
-  jan_sf <- st_sf(jan_nongeographical_attributes, geometry = jan_geometry)
-  bear_sf <- st_sf(bear_nongeographical_attributes, geometry = bear_geometry)
-  skja_sf <- st_sf(skja_nongeographical_attributes, geometry = skja_geometry)
-  eyne_sf <- st_sf(eyne_nongeographical_attributes, geometry = eyne_geometry)
-  alke_sf <- st_sf(alke_nongeographical_attributes, geometry = alke_geometry)
-  inis_sf <- st_sf(inis_nongeographical_attributes, geometry = inis_geometry)
-  litt_sf <- st_sf(litt_nongeographical_attributes, geometry = litt_geometry)
-  isle_sf <- st_sf(isle_nongeographical_attributes, geometry = isle_geometry)
-  jars_sf <- st_sf(jars_nongeographical_attributes, geometry = jars_geometry)
-  lang_sf <- st_sf(lang_nongeographical_attributes, geometry = lang_geometry)
+#   faroe_coords_pts <- st_point(c(6.798,61.950))
+#   jan_coords_pts <- st_point(c(8.718, 70.921))
+#   bear_coords_pts <- st_point(c(-18.956, 74.503))
+#   skja_coords_pts <- st_point(c(17.410, 65.990))
+#   eyne_coords_pts <- st_point(c(3.115, 59.142))  
+#   alke_coords_pts <- st_point(c(-18.459, 79.585))  
+#   inis_coords_pts <- st_point(c(10.204, 54.128))  
+#   litt_coords_pts <- st_point(c(6.585, 52.136))  
+#   isle_coords_pts <- st_point(c(6.559, 57.059))  
+#   jars_coords_pts <- st_point(c(5.174, 59.150))  
+#   lang_coords_pts <- st_point(c(14.650, 66.350))  
+# 
+# # Setting up geometry for each colony
+#   
+#   faroe_geometry <- st_sfc(faroe_coords_pts, crs = "EPSG:4326")
+#   jan_geometry <- st_sfc(jan_coords_pts, crs = "EPSG:4326")
+#   bear_geometry <- st_sfc(bear_coords_pts, crs = "EPSG:4326")
+#   skja_geometry <- st_sfc(skja_coords_pts, crs = "EPSG:4326")
+#   eyne_geometry <- st_sfc(eyne_coords_pts, crs = "EPSG:4326")
+#   alke_geometry <- st_sfc(alke_coords_pts, crs = "EPSG:4326")
+#   inis_geometry <- st_sfc(inis_coords_pts, crs = "EPSG:4326")
+#   litt_geometry <- st_sfc(litt_coords_pts, crs = "EPSG:4326")
+#   isle_geometry <- st_sfc(isle_coords_pts, crs = "EPSG:4326")
+#   jars_geometry <- st_sfc(jars_coords_pts, crs = "EPSG:4326")
+#   lang_geometry <- st_sfc(lang_coords_pts, crs = "EPSG:4326")
+#   
+# # Setting up non-geographical aspect for each colony
+#   
+#   faroe_nongeographical_attributes <- data.frame(name = "Faroe Islands")
+#   jan_nongeographical_attributes <- data.frame(name = "Jan Mayen")  
+#   bear_nongeographical_attributes <- data.frame(name = "Bear Island")
+#   skja_nongeographical_attributes <- data.frame(name = "Skjalfandi")                                                  
+#   eyne_nongeographical_attributes <- data.frame(name = "Eynhallow")      
+#   alke_nongeographical_attributes <- data.frame(name = "Alkefjellet")
+#   inis_nongeographical_attributes <- data.frame(name = "Inishkea")  
+#   litt_nongeographical_attributes <- data.frame(name = "Little Saltee")  
+#   isle_nongeographical_attributes <- data.frame(name = "Isle of Canna")  
+#   jars_nongeographical_attributes <- data.frame(name = "Jarsteinen")  
+#   lang_nongeographical_attributes <- data.frame(name = "Langanes")  
+# 
+# # Creating an sf object
+#   
+#   faroe_sf <- st_sf(faroe_nongeographical_attributes, geometry = faroe_geometry)
+#   jan_sf <- st_sf(jan_nongeographical_attributes, geometry = jan_geometry)
+#   bear_sf <- st_sf(bear_nongeographical_attributes, geometry = bear_geometry)
+#   skja_sf <- st_sf(skja_nongeographical_attributes, geometry = skja_geometry)
+#   eyne_sf <- st_sf(eyne_nongeographical_attributes, geometry = eyne_geometry)
+#   alke_sf <- st_sf(alke_nongeographical_attributes, geometry = alke_geometry)
+#   inis_sf <- st_sf(inis_nongeographical_attributes, geometry = inis_geometry)
+#   litt_sf <- st_sf(litt_nongeographical_attributes, geometry = litt_geometry)
+#   isle_sf <- st_sf(isle_nongeographical_attributes, geometry = isle_geometry)
+#   jars_sf <- st_sf(jars_nongeographical_attributes, geometry = jars_geometry)
+#   lang_sf <- st_sf(lang_nongeographical_attributes, geometry = lang_geometry)
 
 # Overlaying colonies atop plastic dataset
-  
-  plot(plastics)
-  plot(st_geometry(faroe_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  plot(st_geometry(jan_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  plot(st_geometry(bear_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  plot(st_geometry(skja_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  plot(st_geometry(eyne_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  plot(st_geometry(alke_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  plot(st_geometry(inis_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  plot(st_geometry(litt_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  plot(st_geometry(isle_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  plot(st_geometry(jars_sf), cex = 0.4, col = "blue", pch = 16, add = T)
-  overlap_plot <- plot(st_geometry(lang_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+
+  # plot(st_geometry(faroe_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # plot(st_geometry(jan_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # plot(st_geometry(bear_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # plot(st_geometry(skja_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # plot(st_geometry(eyne_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # plot(st_geometry(alke_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # plot(st_geometry(inis_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # plot(st_geometry(litt_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # plot(st_geometry(isle_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # plot(st_geometry(jars_sf), cex = 0.4, col = "blue", pch = 16, add = T)
+  # overlap_plot <- plot(st_geometry(lang_sf), cex = 0.4, col = "blue", pch = 16, add = T)
   
   raster_name_2 <- "outputs/overlap_plot.tif"
   
 # Setting up a buffer of 250 km for each colony
   
-  faroe_buff <- st_buffer(faroe_sf, dist = 250000)
-  jan_buff <- st_buffer(jan_sf, dist = 250000)
-  bear_buff <- st_buffer(bear_sf, dist = 250000)
-  skja_buff <- st_buffer(skja_sf, dist = 250000)
-  eyne_buff <- st_buffer(eyne_sf, dist = 250000)
-  alke_buff <- st_buffer(alke_sf, dist = 250000)
-  inis_buff <- st_buffer(inis_sf, dist = 250000)
-  litt_buff <- st_buffer(litt_sf, dist = 250000)
-  isle_buff <- st_buffer(isle_sf, dist = 250000)
-  jars_buff <- st_buffer(jars_sf, dist = 250000)
-  lang_buff <- st_buffer(lang_sf, dist = 250000)
+  colony_buff <- st_buffer(spatial_laea, dist = 250)
+  colony_buff_4326 <- st_transform(colony_buff, crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+  plot(plastics)
+  plot(colony_buff_4326, add = T)
+  View(colony_buff_4326)
+  library(dplyr)
+  colony_buff_refined <- colony_buff_4326 |> select(c('Colony', 'geometry')) 
+  
+  # Set up a for loop for this
+  
+  # faroe_crop <- mean(values(crop(plastics, colony_buff_refined[1,2])), na.rm = T)
+  # jan_crop <- mean(values(crop(plastics, colony_buff_refined[2,2])), na.rm = T)
+  # bear_crop <- mean(values(crop(plastics, colony_buff_refined[3,2])), na.rm = T)
+  # skja_crop <- mean(values(crop(plastics, colony_buff_refined[4,2])), na.rm = T)
+  # eyne_crop <- mean(values(crop(plastics, colony_buff_refined[5,2])), na.rm = T)
+  # alke_crop <- mean(values(crop(plastics, colony_buff_refined[6,2])), na.rm = T)
+  # inis_crop <- mean(values(crop(plastics, colony_buff_refined[7,2])), na.rm = T)
+  # litt_crop <- mean(values(crop(plastics, colony_buff_refined[8,2])), na.rm = T)
+  # isle_crop <- mean(values(crop(plastics, colony_buff_refined[9,2])), na.rm = T)
+  # jars_crop <- mean(values(crop(plastics, colony_buff_refined[10,2])), na.rm = T)
+  # lang_crop <- mean(values(crop(plastics, colony_buff_refined[11,2])), na.rm = T)
+
+ result <- vector("list", 11)
+ for(i in 1:11){result[[i]] <- mean(values
+                                    (crop
+                                      (plastics, colony_buff_refined[i,2]))
+                                      , na.rm = T)}
+ means_vector <- as.vector(unlist(result))
+ analysis_df <- cbind(colony_buff_refined, Plastic_debris_mean = means_vector)
+
+  # faroe_buff <- st_buffer(faroe_sf, dist = 250000)
+  # class(faroe_buff)
+  # # Do an st_transform here- as in first set median longitude and latitutde for all points of the colony
+  # # then make a crs from the medlong and medlat, then reproject sf obj and their buffers in this new crs (Lambert azimuthal equal-area code)
+  # # then st_transform them back to WGS84 (km to degrees conversion again)
+  # jan_buff <- st_buffer(jan_sf, dist = 250000)
+  # bear_buff <- st_buffer(bear_sf, dist = 250000)
+  # skja_buff <- st_buffer(skja_sf, dist = 250000)
+  # eyne_buff <- st_buffer(eyne_sf, dist = 250000)
+  # alke_buff <- st_buffer(alke_sf, dist = 250000)
+  # inis_buff <- st_buffer(inis_sf, dist = 250000)
+  # litt_buff <- st_buffer(litt_sf, dist = 250000)
+  # isle_buff <- st_buffer(isle_sf, dist = 250000)
+  # jars_buff <- st_buffer(jars_sf, dist = 250000)
+  # lang_buff <- st_buffer(lang_sf, dist = 250000)
   
 # Replacing overlap_plot with buff_overlap_plot
-  
-  plot(plastics)
-  plot(st_geometry(faroe_buff), col = "blue", add = T)
-  plot(st_geometry(jan_buff), col = "blue", add = T)
-  plot(st_geometry(bear_buff), col = "blue", add = T)
-  plot(st_geometry(skja_buff), col = "blue", add = T)
-  plot(st_geometry(eyne_buff), col = "blue", add = T)
-  plot(st_geometry(alke_buff), col = "blue", add = T)
-  plot(st_geometry(inis_buff), col = "blue", add = T)
-  plot(st_geometry(litt_buff), col = "blue", add = T)
-  plot(st_geometry(isle_buff), col = "blue", add = T)
-  plot(st_geometry(jars_buff), col = "blue", add = T)
-  buff_overlap_plot <- plot(st_geometry(lang_buff), col = "blue", add = T)
+
+  # plot(st_geometry(faroe_buff), col = "blue", add = T)
+  # plot(st_geometry(jan_buff), col = "blue", add = T)
+  # plot(st_geometry(bear_buff), col = "blue", add = T)
+  # plot(st_geometry(skja_buff), col = "blue", add = T)
+  # plot(st_geometry(eyne_buff), col = "blue", add = T)
+  # plot(st_geometry(alke_buff), col = "blue", add = T)
+  # plot(st_geometry(inis_buff), col = "blue", add = T)
+  # plot(st_geometry(litt_buff), col = "blue", add = T)
+  # plot(st_geometry(isle_buff), col = "blue", add = T)
+  # plot(st_geometry(jars_buff), col = "blue", add = T)
+  # buff_overlap_plot <- plot(st_geometry(lang_buff), col = "blue", add = T)
   
 # Cropping colony-specific rasters from plastics dataset
-  
-  faroe_cropped <- crop(plastics, faroe_buff)
-  jan_cropped <- crop(plastics, jan_buff)
-  bear_cropped <- crop(plastics, bear_buff)
-  skja_cropped <- crop(plastics, skja_buff)
-  eyne_cropped <- crop(plastics, eyne_buff)
-  alke_cropped <- crop(plastics, alke_buff)
-  inis_cropped <- crop(plastics, inis_buff)  
-  litt_cropped <- crop(plastics, litt_buff)  
-  isle_cropped <- crop(plastics, isle_buff)  
-  jars_cropped <- crop(plastics, jars_buff)  
-  lang_cropped <- crop(plastics, lang_buff)  
-  some_vector <- c(faroe_cropped, jan_cropped, bear_cropped, skja_cropped,
-                   eyne_cropped, alke_cropped, inis_cropped, litt_cropped, 
-                   isle_cropped, jars_cropped, lang_cropped)
-summary(some_vector)
+
+#   mean_faroe_cropped <- mean(values(crop(plastics, buff[1,])), na.rm = T)
+#   mean_jan_cropped<- mean(values(crop(plastics, buff[2,])), na.rm = T)
+#   mean_bear_cropped <- mean(values(crop(plastics, buff[3,])), na.rm = T)
+#   mean_skja_cropped <- mean(values(crop(plastics, buff[4,])), na.rm = T)
+#   mean_eyne_cropped <- mean(values(crop(plastics, buff[5,])), na.rm = T)
+#   mean_alke_cropped <- mean(values(crop(plastics, buff[6,])), na.rm = T)
+#   mean_inis_cropped <- mean(values(crop(plastics, buff[7,])), na.rm = T) 
+#   mean_litt_cropped <- mean(values(crop(plastics, buff[8,])), na.rm = T)
+#   mean_isle_cropped <- mean(values(crop(plastics, buff[9,])), na.rm = T)
+#   mean_jars_cropped <- mean(values(crop(plastics, buff[10,])), na.rm = T) 
+#   mean_lang_cropped <- mean(values(crop(plastics, buff[11,])), na.rm = T)
+#   
+# faroe_cropped <- crop(plastics, faroe_buff)
+# View(faroe_buff)
+
+#   jan_cropped <- crop(plastics, jan_buff)
+#   bear_cropped <- crop(plastics, bear_buff)
+#   skja_cropped <- crop(plastics, skja_buff)
+#   eyne_cropped <- crop(plastics, eyne_buff)
+#   alke_cropped <- crop(plastics, alke_buff)
+#   inis_cropped <- crop(plastics, inis_buff)  
+#   litt_cropped <- crop(plastics, litt_buff)  
+#   isle_cropped <- crop(plastics, isle_buff)  
+#   jars_cropped <- crop(plastics, jars_buff)  
+#   lang_cropped <- crop(plastics, lang_buff)  
+#   some_vector <- c(faroe_cropped, jan_cropped, bear_cropped, skja_cropped,
+#                    eyne_cropped, alke_cropped, inis_cropped, litt_cropped, 
+#                    isle_cropped, jars_cropped, lang_cropped)
+# summary(some_vector)
 
 # Creating a values' vector
   # value_1 <- values(faroe_cropped) 
@@ -310,30 +369,31 @@ summary(some_vector)
   
 # Calculating means of values inside each colony-specific raster
   
-  mean_faroe_cropped <- mean(values(faroe_cropped), na.rm = T)
-  mean_jan_cropped <- mean(values(jan_cropped), na.rm = T)
-  mean_bear_cropped <- mean(values(bear_cropped), na.rm = T)
-  mean_skja_cropped <- mean(values(skja_cropped), na.rm = T)
-  mean_eyne_cropped <- mean(values(eyne_cropped), na.rm = T)
-  mean_alke_cropped <- mean(values(alke_cropped), na.rm = T)
-  mean_inis_cropped <- mean(values(inis_cropped), na.rm = T)
-  mean_litt_cropped <- mean(values(litt_cropped), na.rm = T)
-  mean_isle_cropped <- mean(values(isle_cropped), na.rm = T)
-  mean_jars_cropped <- mean(values(jars_cropped), na.rm = T)
-  mean_lang_cropped <- mean(values(lang_cropped), na.rm = T)
+  # mean_faroe_cropped <- mean(values(faroe_cropped), na.rm = T)
+  # mean_jan_cropped <- mean(values(jan_cropped), na.rm = T)
+  # mean_bear_cropped <- mean(values(bear_cropped), na.rm = T)
+  # mean_skja_cropped <- mean(values(skja_cropped), na.rm = T)
+  # mean_eyne_cropped <- mean(values(eyne_cropped), na.rm = T)
+  # mean_alke_cropped <- mean(values(alke_cropped), na.rm = T)
+  # mean_inis_cropped <- mean(values(inis_cropped), na.rm = T)
+  # mean_litt_cropped <- mean(values(litt_cropped), na.rm = T)
+  # mean_isle_cropped <- mean(values(isle_cropped), na.rm = T)
+  # mean_jars_cropped <- mean(values(jars_cropped), na.rm = T)
+  # mean_lang_cropped <- mean(values(lang_cropped), na.rm = T)
 
-  analysis_df <- data.frame(Colonies = as.factor(c("Faroe islands", "Jan Mayen", "Bear island", 
-                                         "Skjalfandi", "Eynehallow", "Alkefjellet",
-                                         "Inishkea", "Little Saltee", "Isle of Canna",
-                                         "Jarsteinen", "Langanes")), 
-                            Plastic_debris_mean = c(mean_faroe_cropped,  mean_jan_cropped,
-                                                    mean_bear_cropped, mean_skja_cropped,
-                                                    mean_eyne_cropped, mean_alke_cropped,
-                                                    mean_inis_cropped, mean_litt_cropped,
-                                                    mean_isle_cropped, mean_jars_cropped,
-                                                    mean_lang_cropped))
+  # analysis_df <- data.frame(Colonies = as.factor(c("Faroe islands", "Jan Mayen", "Bear island", 
+  #                                        "Skjalfandi", "Eynehallow", "Alkefjellet",
+  #                                        "Inishkea", "Little Saltee", "Isle of Canna",
+  #                                        "Jarsteinen", "Langanes")), 
+  #                           Plastic_debris_mean = c(mean_faroe_cropped,  mean_jan_cropped,
+  #                                                   mean_bear_cropped, mean_skja_cropped,
+  #                                                   mean_eyne_cropped, mean_alke_cropped,
+  #                                                   mean_inis_cropped, mean_litt_cropped,
+  #                                                   mean_isle_cropped, mean_jars_cropped,
+  #                                                   mean_lang_cropped))
+ 
   # Ordering colony-wise exposure in an intact order
-  analysis_df$Colonies <- factor(analysis_df$Colonies, levels = analysis_df$Colonies)
+  analysis_df$Colony <- factor(analysis_df$Colony, levels = analysis_df$Colony)
   str(analysis_df)
 
 # Notes ----
@@ -342,7 +402,7 @@ summary(some_vector)
 # Plotting a basic ggplot for analysis_df
 
 library(ggplot2)
-analysis_df_bar_plot <- ggplot(data = analysis_df, aes(x = Colonies, y = Plastic_debris_mean)) +
+analysis_df_bar_plot <- ggplot(data = analysis_df, aes(x = Colony, y = Plastic_debris_mean)) +
   geom_col(colour = "black", fill = "skyblue") +
   scale_y_continuous(name = "Plastic debris mean") +
   coord_cartesian(ylim = c(1.1,5)) +
@@ -352,66 +412,170 @@ analysis_df_bar_plot
 
 # Defining a standard deviation column in analysis_df for error bars in box-plot
 
-sd1 <- sd(values(faroe_cropped), na.rm = T)
-sd2 <- sd(values(jan_cropped), na.rm = T)
-sd3 <- sd(values(bear_cropped), na.rm = T)
-sd4 <- sd(values(skja_cropped), na.rm = T)
-sd5 <- sd(values(eyne_cropped), na.rm = T)
-sd6 <- sd(values(alke_cropped), na.rm = T)
-sd7 <- sd(values(inis_cropped), na.rm = T)
-sd8 <- sd(values(litt_cropped), na.rm = T)
-sd9 <- sd(values(isle_cropped), na.rm = T)
-sd10 <- sd(values(jars_cropped), na.rm = T)
-sd11 <- sd(values(lang_cropped), na.rm = T)
+# sd1 <- sd(values(faroe_cropped), na.rm = T)
+# sd2 <- sd(values(jan_cropped), na.rm = T)
+# sd3 <- sd(values(bear_cropped), na.rm = T)
+# sd4 <- sd(values(skja_cropped), na.rm = T)
+# sd5 <- sd(values(eyne_cropped), na.rm = T)
+# sd6 <- sd(values(alke_cropped), na.rm = T)
+# sd7 <- sd(values(inis_cropped), na.rm = T)
+# sd8 <- sd(values(litt_cropped), na.rm = T)
+# sd9 <- sd(values(isle_cropped), na.rm = T)
+# sd10 <- sd(values(jars_cropped), na.rm = T)
+# sd11 <- sd(values(lang_cropped), na.rm = T)
+# analysis_df_2 <- cbind(analysis_df, Standard_devation = c(sd1, sd2, sd3, sd4, sd5, sd6, sd7, 
+#                                                           sd8, sd9, sd10, sd11))
 
-analysis_df_2 <- cbind(analysis_df, Standard_devation = c(sd1, sd2, sd3, sd4, sd5, sd6, sd7, 
-                                                          sd8, sd9, sd10, sd11))
+sd_result <- vector("list", 11)
+for(i in 1:11){sd_result[[i]] <- sd(values
+                                   (
+                                     crop
+                                     (plastics, colony_buff_refined[i,2])
+                                     )
+                                   , na.rm = T)}
+sd_vector <- as.vector(unlist(sd_result))
+analysis_df_2 <- cbind(analysis_df, Standard_deviation = sd_vector)
+transmute_seom <- analysis_df_2 |> transmute(Standard_error_of_mean = Standard_deviation/sqrt(Sample_size))
+analysis_df_2 <- cbind(analysis_df_2, transmute_seom)
 View(analysis_df_2)
 
-# Trying out a 'box-plot'
-analysis_df_box_plot <- ggplot(data = analysis_df_2, aes(x = Colonies, y = Plastic_debris_mean,
-                               ymin = Plastic_debris_mean - Standard_devation,
-                               ymax = Plastic_debris_mean + Standard_devation)) +
+# Trying out a 'box-plot' with standard deviation
+  analysis_df_box_plot <- ggplot(data = analysis_df_2, aes(x = Colony, y = Plastic_debris_mean,
+                               ymin = Plastic_debris_mean - Standard_deviation,
+                               ymax = Plastic_debris_mean + Standard_deviation)) +
   scale_y_continuous(name = "Plastic debris mean") +
   geom_boxplot() +
   theme_classic() +
   theme(axis.line = element_line(colour = "grey"), axis.text.x = element_text(angle = 90)) +
   geom_errorbar()
 analysis_df_box_plot
+
+# Trying out a plot with seom
+analysis_df_seom <- analysis_df_box_plot <- ggplot(data = analysis_df_2, aes(x = Colony, y = Plastic_debris_mean,
+                                                                             ymin = Plastic_debris_mean - Standard_error_of_mean,
+                                                                             ymax = Plastic_debris_mean + Standard_error_of_mean)) +
+  scale_y_continuous(name = "Plastic debris mean") +
+  geom_boxplot() +
+  theme_classic() +
+  theme(axis.line = element_line(colour = "grey"), axis.text.x = element_text(angle = 90)) +
+  geom_errorbar()
+analysis_df_seom
  
 # Analysis----
 
 # Checking sample size 
-faroe_sum <- sum(!is.na(values(faroe_cropped))) # 30
-jan_sum <- sum(!is.na(values(jan_cropped))) # 56
-bear_sum <- sum(!is.na(values(bear_cropped))) # 24
-skja_sum <- sum(!is.na(values(skja_cropped))) # 18
-eyne_sum <- sum(!is.na(values(eyne_cropped))) # 31
-alke_sum <- sum(!is.na(values(alke_cropped))) # 5
-inis_sum <- sum(!is.na(values(inis_cropped))) # 26
-litt_sum <- sum(!is.na(values(litt_cropped))) # 20
-isle_sum <- sum(!is.na(values(isle_cropped))) # 26
-jars_sum <- sum(!is.na(values(jars_cropped))) # 24
-lang_sum <- sum(!is.na(values(lang_cropped))) # 40
+# faroe_sum <- sum(!is.na(values(faroe_cropped))) # 30
+# jan_sum <- sum(!is.na(values(jan_cropped))) # 56
+# bear_sum <- sum(!is.na(values(bear_cropped))) # 24
+# skja_sum <- sum(!is.na(values(skja_cropped))) # 18
+# eyne_sum <- sum(!is.na(values(eyne_cropped))) # 31
+# alke_sum <- sum(!is.na(values(alke_cropped))) # 5
+# inis_sum <- sum(!is.na(values(inis_cropped))) # 26
+# litt_sum <- sum(!is.na(values(litt_cropped))) # 20
+# isle_sum <- sum(!is.na(values(isle_cropped))) # 26
+# jars_sum <- sum(!is.na(values(jars_cropped))) # 24
+# lang_sum <- sum(!is.na(values(lang_cropped))) # 40
 
-# Adding sample size to analysis_df
-analysis_df <- cbind(analysis_df, Sample_size = c(faroe_sum, jan_sum, bear_sum, skja_sum, eyne_sum,
-                                    alke_sum, inis_sum, litt_sum, isle_sum, jars_sum,
-                                    lang_sum))
-View(analysis_df)
+ss_result <- vector("list", 11)
+for(i in 1:11){
+  ss_result[[i]] <- sum(!is.na
+                   (values(crop(plastics, colony_buff_refined[i,2])))
+                     )
+}
+Sample_size <- as.vector(unlist(ss_result))
+analysis_df_2 <- cbind(analysis_df, Sample_size)
+View(analysis_df_2)
 
-# Checking the normality assumption for each colony
-shapiro.test(values(faroe_cropped))
-shapiro.test(values(jan_cropped))
-shapiro.test(values(bear_cropped))
-shapiro.test(values(skja_cropped))
-shapiro.test(values(eyne_cropped)) # Normally distributed
-shapiro.test(values(alke_cropped)) # Normally distributed
-shapiro.test(values(inis_cropped)) # Normally distributed
-shapiro.test(values(litt_cropped)) # Normally distributed
-shapiro.test(values(isle_cropped)) # Normally distributed
-shapiro.test(values(jars_cropped))
-shapiro.test(values(lang_cropped))
+# # Adding sample size to analysis_df
+# analysis_df <- cbind(analysis_df, Sample_size = c(faroe_sum, jan_sum, bear_sum, skja_sum, eyne_sum,
+#                                     alke_sum, inis_sum, litt_sum, isle_sum, jars_sum,
+#                                     lang_sum))
+# View(analysis_df)
+
+# Checking the normality assumption for each colony----
+
+# shapiro.test(values(faroe_cropped))
+# shapiro.test(values(jan_cropped))
+# shapiro.test(values(bear_cropped))
+# shapiro.test(values(skja_cropped))
+# shapiro.test(values(eyne_cropped)) # Normally distributed
+# shapiro.test(values(alke_cropped)) # Normally distributed
+# shapiro.test(values(inis_cropped)) # Normally distributed
+# shapiro.test(values(litt_cropped)) # Normally distributed
+# shapiro.test(values(isle_cropped)) # Normally distributed- but variables don't have to be normally distributed 
+#                                    # for running parametric tests, their residuals have to be
+# shapiro.test(values(jars_cropped))
+# shapiro.test(values(lang_cropped))
+
+library(ggpubr)
+par(mfrow = c(3,5))
+density_plots <- vector("list", 11)
+density_plots[[i]] <- for(i in 1:11){
+  print(ggdensity(na.omit(values(crop(plastics, colony_buff_refined[i,2]))), 
+          main = "Density plot",
+          xlab = "Plastic debris value")
+  )
+}
+library(gridExtra)
+grid.arrange(plot_1, plot_2, plot_3, plot_4, plot_5, plot_6, plot_7, plot_8,
+             plot_9, plot_10, plot_11, ncol = 5, nrow = 3)
+
+# plot_1 <- ggdensity(values(crop(plastics, colony_buff_refined[1,2])), 
+#           main = "Density plot",
+#           xlab = "Plastic debris value")
+# plot_2 <- ggdensity(values(crop(plastics, colony_buff_refined[2,2])), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+# plot_3 <- ggdensity(values(crop(plastics, colony_buff_refined[3,2])), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+# plot_4 <- ggdensity(values(crop(plastics, colony_buff_refined[4,2])), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+# plot_5 <- ggdensity(values(crop(plastics, colony_buff_refined[5,2])), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+# plot_6 <- ggdensity(values(crop(plastics, colony_buff_refined[6,2])), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+# plot_7 <- ggdensity(values(crop(plastics, colony_buff_refined[7,2])), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+# plot_8 <- ggdensity(values(crop(plastics, colony_buff_refined[8,2])), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+# plot_9 <- ggdensity(na.omit(values(crop(plastics, colony_buff_refined[9,2]))), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+# plot_10 <- ggdensity(values(crop(plastics, colony_buff_refined[10,2])), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+# plot_11 <- ggdensity(values(crop(plastics, colony_buff_refined[11,2])), 
+#                     main = "Density plot",
+#                     xlab = "Plastic debris value")
+
+shapiro_result <- vector("list", 11)
+for(i in 1:11){
+  shapiro_result[[i]] <- shapiro.test(values(crop(plastics, colony_buff_refined[i,2])))
+}
+for(i in 1:11){print(shapiro_result[[i]])}
+
+# Results:
+# 1: Non-normal
+# 2: Non-normal
+# 3: Non-normal
+# 4: Non-normal
+# 5: Normal
+# 6: Normal
+# 7: Normal
+# 8: Normal
+# 9: Normal
+# 10: Normal
+# 11: Non-normal
+
+Sample_size <- as.vector(unlist(ss_result))
+analysis_df_2 <- cbind(analysis_df, Sample_size)
+View(analysis_df_2)
 
 # Performing the non-parametric Kruskal Wallis test
 # First create a new dataframe that contains two columns: plastic abundance value
@@ -513,3 +677,10 @@ Anova(ancova_model) # didn't mention the type ("III" in the example) because I d
 # relation, hence different colonies have different plastic exposures never mind their sample
 # sizes but ancova can't be performed here technically because its second assumption is violated.
 # I don't know what I'll do at this point, need to read some basics for now.
+
+# Working with non-breeding season's data
+setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/input_data/")
+new_data_1 <- readRDS("test_2colonies.rds")
+View(new_data)
+new_data_2 <- readRDS("test_2colonies_individ_info.rds")
+View(new_data_2)
