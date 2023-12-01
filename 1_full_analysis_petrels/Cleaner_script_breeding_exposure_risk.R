@@ -9,6 +9,7 @@ library(googlesheets4)
 library(ggplot2)
 library(ggpubr)
 library(gridExtra)
+library(terra)
 
 # Setting up the right directory ----
 setwd('/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/')
@@ -153,6 +154,7 @@ analysis_df_2 <- cbind(analysis_df, Sample_size)
 transmute_seom <- analysis_df_2 |> transmute(Standard_error_of_mean = Standard_deviation/sqrt(Sample_size))
 analysis_df_2 <- cbind(analysis_df_2, transmute_seom)
 
+
 # Plot with standard deviation ----
 analysis_df_box_plot <- ggplot(data = analysis_df_2, aes(x = Colony, y = Plastic_debris_mean,
                                                          ymin = Plastic_debris_mean - Standard_deviation,
@@ -175,6 +177,7 @@ analysis_df_seom <- analysis_df_box_plot <- ggplot(data = analysis_df_2, aes(x =
   geom_errorbar()
 analysis_df_seom
 
+
 # Adding a sample size column in analysis_df ----
 ss_result <- vector("list", 11)
 for(i in 1:11){
@@ -184,6 +187,7 @@ for(i in 1:11){
 }
 Sample_size <- as.vector(unlist(ss_result))
 analysis_df_2 <- cbind(analysis_df, Sample_size)
+View(analysis_df_2)
 
 # Normality testing: ----
 
@@ -237,4 +241,35 @@ for(i in 1:11){print(shapiro_result[[i]])}
 # 9: Normal
 # 10: Normal
 # 11: Non-normal
+
+
+
+# Creating a boxplot for easy visualization ----
+
+boxplot_plastic_debris_values <- ggplot(data = new_analysis_df, aes(x = Colony, y = Plastic_debris_value)) +
+  geom_point() +
+  geom_boxplot() +
+  theme_classic() +
+  scale_y_continuous(name = "Plastic debris value") +
+  theme(axis.line = element_line(colour = "grey"), axis.text.x = element_text(angle = 90)) 
+boxplot_plastic_debris_values
+
+# Playing around with linear models----
+# Checking the assumptions of lm with categorical predictors 
+
+install.packages("performance")
+library(performance)
+install.packages("see")
+library(see)
+trial_lm <- lm(data = new_analysis_df, Plastic_debris_value ~ Colony)
+trial_lm
+summary(trial_lm)
+anova(trial_lm)
+plot(trial_lm)
+check_model(trial_lm)
+shapiro.test(trial_lm$residuals) # Residuals are non-normal
+library(dplyr)
+trimmed_new_analysis_df <- new_analysis_df |> filter(!grepl('Alkefjellet', Colony))
+trimmed_lm <- lm(data = trimmed_new_analysis_df, Plastic_debris_value ~ Colony)
+shapiro.test(trimmed_lm$residuals) # Residuals are non-normal
 

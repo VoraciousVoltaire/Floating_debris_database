@@ -591,43 +591,70 @@ for(j in 1:11){
   grid.arrange(grobs = qplot, ncol = 5, nrow = 3)
 }
 
-
+# Creating a new analysis data frame with short code
+library(terra)
+values_list <- vector('list', 269)
+for(i in 1:11){
+  values_list[[i]] <- na.omit(values(crop(plastics, colony_buff_refined[i,2])))
+  }
+values_vector <- unlist(values_list)
+new_analysis_df <- data.frame(Colony = rep(analysis_df_2$Colony, analysis_df_2$Sample_size),
+                              Plastic_debris_value = values_vector)
+View(new_analysis_df)
 
 # Performing the non-parametric Kruskal Wallis test
 # First create a new dataframe that contains two columns: plastic abundance value
 # and colony name (like group)
 
-faroe_value_df <- na.omit(data.frame(Colony_name = rep("Faroe islands", length(values(faroe_cropped))), 
-                                     Values = values(faroe_cropped), Sample_size = 30))
-jan_value_df <- na.omit(data.frame(Colony_name = rep("Jan Mayen", length(values(jan_cropped))), 
-                                     Values = values(jan_cropped), Sample_size = 56))
-bear_value_df <- na.omit(data.frame(Colony_name = rep("Bear island", length(values(bear_cropped))), 
-                                     Values = values(bear_cropped), Sample_size = 24))
-skja_value_df <- na.omit(data.frame(Colony_name = rep("Skjalfandi", length(values(skja_cropped))), 
-                                     Values = values(skja_cropped), Sample_size = 18))
-eyne_value_df <- na.omit(data.frame(Colony_name = rep("Eynehallow", length(values(eyne_cropped))), 
-                                     Values = values(eyne_cropped), Sample_size = 31))
-alke_value_df <- na.omit(data.frame(Colony_name = rep("Alkefjellet", length(values(alke_cropped))), 
-                                     Values = values(alke_cropped), Sample_size = 5))
-inis_value_df <- na.omit(data.frame(Colony_name = rep("Inishkea", length(values(inis_cropped))), 
-                                     Values = values(inis_cropped), Sample_size = 26))
-litt_value_df <- na.omit(data.frame(Colony_name = rep("Little Saltee", length(values(litt_cropped))), 
-                                     Values = values(litt_cropped), Sample_size = 20))
-isle_value_df <- na.omit(data.frame(Colony_name = rep("Isle of Canna", length(values(isle_cropped))), 
-                                     Values = values(isle_cropped), Sample_size = 26))
-jars_value_df <- na.omit(data.frame(Colony_name = rep("Jarsteinen", length(values(jars_cropped))), 
-                                     Values = values(jars_cropped), Sample_size = 24))
-lang_value_df <- na.omit(data.frame(Colony_name = rep("Langanes", length(values(lang_cropped))), 
-                                     Values = values(lang_cropped), Sample_size = 40))
+# faroe_value_df <- na.omit(data.frame(Colony_name = rep("Faroe islands", length(values(faroe_cropped))), 
+#                                      Values = values(faroe_cropped), Sample_size = 30))
+# jan_value_df <- na.omit(data.frame(Colony_name = rep("Jan Mayen", length(values(jan_cropped))), 
+#                                      Values = values(jan_cropped), Sample_size = 56))
+# bear_value_df <- na.omit(data.frame(Colony_name = rep("Bear island", length(values(bear_cropped))), 
+#                                      Values = values(bear_cropped), Sample_size = 24))
+# skja_value_df <- na.omit(data.frame(Colony_name = rep("Skjalfandi", length(values(skja_cropped))), 
+#                                      Values = values(skja_cropped), Sample_size = 18))
+# eyne_value_df <- na.omit(data.frame(Colony_name = rep("Eynehallow", length(values(eyne_cropped))), 
+#                                      Values = values(eyne_cropped), Sample_size = 31))
+# alke_value_df <- na.omit(data.frame(Colony_name = rep("Alkefjellet", length(values(alke_cropped))), 
+#                                      Values = values(alke_cropped), Sample_size = 5))
+# inis_value_df <- na.omit(data.frame(Colony_name = rep("Inishkea", length(values(inis_cropped))), 
+#                                      Values = values(inis_cropped), Sample_size = 26))
+# litt_value_df <- na.omit(data.frame(Colony_name = rep("Little Saltee", length(values(litt_cropped))), 
+#                                      Values = values(litt_cropped), Sample_size = 20))
+# isle_value_df <- na.omit(data.frame(Colony_name = rep("Isle of Canna", length(values(isle_cropped))), 
+#                                      Values = values(isle_cropped), Sample_size = 26))
+# jars_value_df <- na.omit(data.frame(Colony_name = rep("Jarsteinen", length(values(jars_cropped))), 
+#                                      Values = values(jars_cropped), Sample_size = 24))
+# lang_value_df <- na.omit(data.frame(Colony_name = rep("Langanes", length(values(lang_cropped))), 
+#                                      Values = values(lang_cropped), Sample_size = 40))
+# 
+# merged_value_df <- rbind(faroe_value_df, jan_value_df, bear_value_df, skja_value_df,
+#                          eyne_value_df, alke_value_df, inis_value_df, litt_value_df,
+#                          isle_value_df, jars_value_df, lang_value_df)
+# View(merged_value_df)           
 
-merged_value_df <- rbind(faroe_value_df, jan_value_df, bear_value_df, skja_value_df,
-                         eyne_value_df, alke_value_df, inis_value_df, litt_value_df,
-                         isle_value_df, jars_value_df, lang_value_df)
-View(merged_value_df)           
-
-kruskal.test(Values ~ Colony_name, data = merged_value_df)
-pairwise.wilcox.test(merged_value_df$Values, merged_value_df$Colony_name,
+kruskal.test(Plastic_debris_value ~ Colony, data = new_analysis_df)
+pairwise.wilcox.test(new_analysis_df$Plastic_debris_value, new_analysis_df$Colony,
                      p.adjust.method = "BH")
+plot(glm(Plastic_debris_value ~ Colony, data = new_analysis_df))
+
+kruskal.test(Plastic_debris_value ~ Colony, data = trimmed_new_analysis_df)
+pairwise.wilcox.test(trimmed_new_analysis_df$Plastic_debris_value, trimmed_new_analysis_df$ Colony,
+                     p.adjust.method = "BH")
+
+
+
+
+library(ggplot2)
+boxplot_plastic_debris_values <- ggplot(data = new_analysis_df, aes(x = Colony, y = Plastic_debris_value)) +
+  geom_point() +
+  geom_boxplot() +
+  theme_classic() +
+  scale_y_continuous(name = "Plastic debris value") +
+  theme(axis.line = element_line(colour = "grey"), axis.text.x = element_text(angle = 90)) 
+boxplot_plastic_debris_values
+
 
 # Results show that Jarsteinen-Eynehallow, Jarsteinen-Faroe islands, 
 # Little-Saltee-Inishkea, Skjalfandi-Eynehallow, Skjalfandi-Faroe islands,
@@ -694,9 +721,73 @@ Anova(ancova_model) # didn't mention the type ("III" in the example) because I d
 # sizes but ancova can't be performed here technically because its second assumption is violated.
 # I don't know what I'll do at this point, need to read some basics for now.
 
+# I don't need an ANCOVA, rather I needed a factorial ANOVA because all my IVs were categorical;
+# however, I have moved on to analysis rather than tests. Hence, I shall fit a generalized linear
+# model.
+
+# Robustyfying the data
+require(MASS)
+robust_model = rlm(Plastic_debris_value ~ Colony, data = new_analysis_df)
+summary(robust_model)
+plot(robust_model)
+# Isn't needed actually because the data is already log transformed and robustyfying it along
+# with that isn't recommended?
+
+# In order to not use Kruskal-Wallis, I'd have to use a glm that assumes the residuals to follow
+# a non-linear distribution: poisson, gamma, binomial, negative binomial distribution- use compare.fits
+# or model.comparison 
+
+# Okay, understanding GLMs---- 
+# I think I'll spend time on this later because the gamma family isn't really fitting 
+# the data very well (from Q-Q residuals), so for now Kruskal-Wallis saves the day
+install.packages("DHARMa")
+library(DHARMa)
+mod1 <- glm(Plastic_debris_value ~ Colony, family=Gamma, data = trimmed_new_analysis_df)
+summary(mod1)
+plot(mod1)
+simulationOutput <- simulateResiduals(fittedModel = mod1)
+plot(simulationOutput)
+
+count_mod <- glm(Plastic_debris_value ~ 1, data = new_analysis_df)
+summary(count_mod)
+library(sf)
+
+
+
+
+
 # Working with non-breeding season's data
 setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/input_data/")
 new_data_1 <- readRDS("test_2colonies.rds")
-View(new_data)
 new_data_2 <- readRDS("test_2colonies_individ_info.rds")
 View(new_data_2)
+indiv_merged_df <- merge(new_data_1, new_data_2, by = "individ_id")
+View(indiv_merged_df)
+relevant_new_data_1 <- dplyr::select(indiv_merged_df, timestamp, lon, lat, loc_type, colony)
+View(relevant_new_data_1)
+sf_relevant <- st_as_sf(relevant_new_data_1[,c(2,3,5)], coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+plot(sf_relevant)
+
+# Come up with season cutoffs and trim data accordingly: use only non-breeding season data
+bjo_nbs_df <- indiv_merged_df |> filter(colony == "Bjørnøya", !grepl(c('-05-|-06-|-07-') ,timestamp)) |> dplyr::select(c(timestamp, colony, lon, lat))
+bjo_sf_nbs_df <- st_as_sf(bjo_nbs_df[,-1], coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+plot(plastics)
+plot(bjo_sf_nbs_df, cex = 0.4, col = "blue", pch = 16, add = T)
+plot(st_crop(plastics, bjo_sf_nbs_df))
+
+library(ggplot2)
+na.omit(values(crop(plastics, bjo_sf_nbs_df)))
+
+plastics_spdf <- as(plastics, "SpatialPixelsDataFrame")
+plastics_spdf_df <- as.data.frame(plastics_spdf)
+colnames(plastics_spdf_df) <- c("Value", "x", "y")
+bjørnoya_overlap_gg <- ggplot() +  
+  geom_tile(data = plastics_spdf_df, aes(x = x, y = y, fill = Value), alpha = 0.8) + 
+  geom_sf(data = bjo_sf_nbs_df, alpha = 0.5, cex = 0.4) +
+  scale_fill_viridis_c() +
+  coord_sf() +
+  theme_classic() +
+  theme(legend.position="bottom") +
+  theme(legend.key.width=unit(2, "cm")) +
+  theme(axis.line = element_line("grey")) 
+bjørnoya_overlap_gg
