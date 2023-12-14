@@ -756,38 +756,3 @@ library(sf)
 
 
 
-# Working with non-breeding season's data
-setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/input_data/")
-new_data_1 <- readRDS("test_2colonies.rds")
-new_data_2 <- readRDS("test_2colonies_individ_info.rds")
-View(new_data_2)
-indiv_merged_df <- merge(new_data_1, new_data_2, by = "individ_id")
-View(indiv_merged_df)
-relevant_new_data_1 <- dplyr::select(indiv_merged_df, timestamp, lon, lat, loc_type, colony)
-View(relevant_new_data_1)
-sf_relevant <- st_as_sf(relevant_new_data_1[,c(2,3,5)], coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-plot(sf_relevant)
-
-# Come up with season cutoffs and trim data accordingly: use only non-breeding season data
-bjo_nbs_df <- indiv_merged_df |> filter(colony == "Bjørnøya", !grepl(c('-05-|-06-|-07-') ,timestamp)) |> dplyr::select(c(timestamp, colony, lon, lat))
-bjo_sf_nbs_df <- st_as_sf(bjo_nbs_df[,-1], coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-plot(plastics)
-plot(bjo_sf_nbs_df, cex = 0.4, col = "blue", pch = 16, add = T)
-plot(st_crop(plastics, bjo_sf_nbs_df))
-
-library(ggplot2)
-na.omit(values(crop(plastics, bjo_sf_nbs_df)))
-
-plastics_spdf <- as(plastics, "SpatialPixelsDataFrame")
-plastics_spdf_df <- as.data.frame(plastics_spdf)
-colnames(plastics_spdf_df) <- c("Value", "x", "y")
-bjørnoya_overlap_gg <- ggplot() +  
-  geom_tile(data = plastics_spdf_df, aes(x = x, y = y, fill = Value), alpha = 0.8) + 
-  geom_sf(data = bjo_sf_nbs_df, alpha = 0.5, cex = 0.4) +
-  scale_fill_viridis_c() +
-  coord_sf() +
-  theme_classic() +
-  theme(legend.position="bottom") +
-  theme(legend.key.width=unit(2, "cm")) +
-  theme(axis.line = element_line("grey")) 
-bjørnoya_overlap_gg
