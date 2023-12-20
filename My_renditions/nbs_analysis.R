@@ -17,6 +17,8 @@ new_data_1 <- readRDS("test_2colonies.rds")
 new_data_2 <- readRDS("test_2colonies_individ_info.rds")
 indiv_merged_df <- merge(new_data_1, new_data_2, by = "individ_id")
 relevant_new_data_1 <- dplyr::select(indiv_merged_df, individ_id, timestamp, lon, lat, loc_type, colony)
+relevant_new_data_2 <- relevant_new_data_1 %>% filter(!grepl(c('-04-|-05-|-06-|-07-|-08-|-09-') ,timestamp))
+View(relevant_new_data_2)
 
 # Script- setting an overarching for loop for looping all colonies
 setwd('/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/')
