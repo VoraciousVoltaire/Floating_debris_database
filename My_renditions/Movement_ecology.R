@@ -8,6 +8,7 @@ library(amt)
 library(sf)
 library(rnaturalearth)
 library(plotly)
+library(ggplot2)
 
 # Prepare data for amt package requirements
 trial <- relevant_new_data_2 |> filter(colony == "Bjørnøya")
@@ -70,14 +71,14 @@ kde.href.contours <- hr_isopleths(dat.kde.ref)
 
 # ggplot with couple
 ggplot() +
-  # geom_tile(data = plastics_spdf_df, aes(x = x, y = y, fill = Value), alpha = 0.8) + # becuase produces a very distorted graph
+  # geom_tile(data = plastics_spdf_df, aes(x = x, y = y, fill = Value), alpha = 0.8) + # because produces a very distorted graph
   geom_sf(data = coupled_countries) +
   geom_point(data = trial, aes(lon,lat), alpha = 0.25, size = 1, color = "chartreuse") +
   scale_fill_viridis_c() +
   theme_bw() +
   coord_sf(xlim = c(-66, 72), ylim = c(50, 83))
 
-# Make isopleth contours aat requested levels
+# Make isopleth contours at requested levels
 h_ref_ggplot <- ggplot() +
   geom_sf(data = coupled_countries) +
   geom_path(data = trial, aes(lon,lat,group = individ_id), alpha = 0.25, size = 0.3) +
@@ -114,12 +115,9 @@ dat.id.kde.href <- dat.track %>%
               levels = c(0.5, 0.95))) %>%
   # map(hr_isopleths) 
   do.call(rbind, .)
-class(dat.id.kde.href)
- 
  
 dat.id.kde.href <- as.data.frame(dat.id.kde.href) %>%
   mutate(id = rownames(.), .before = estimator)
-View(dat.id.kde.href)
 ggplot() +
   geom_sf(data = coupled_countries) +
   geom_path(data = trial, aes(lon, lat, group = individ_id), alpha = 0.25, size = 0.3) +
@@ -138,7 +136,6 @@ dat.id.kde.hpi <- dat.track %>%
   do.call(rbind, .)
 dat.id.kde.hpi <- dat.id.kde.hpi %>%
   mutate(individ_id = rownames(.), .before = level)
-View(dat.id.kde.hpi)
 ggplot() +
   geom_sf(data = coupled_countries) +
   geom_path(data = trial, aes(lon, lat, group = individ_id), alpha = 0.25, size = 0.3) +
@@ -160,7 +157,7 @@ trial <- trial %>% mutate(location_error = ifelse(
 trial_sf <- st_as_sf(trial, coords = c("lon", "lat"), crs = 4326)
 trial_sf_merc <- st_transform(trial_sf, CRS('+proj=merc +lon_0=0 +datum=WGS84 +units=km +no_defs'))
 trial_sf_merc_split <- trial_sf_merc %>% mutate(x = st_coordinates(.)[,1], y = st_coordinates(.)[,2])
-trial_merc_df <- data.frame(trial_sf_merc_split) %>% select(,-6)
+trial_merc_df <- data.frame(trial_sf_merc_split)[,-6]
 trial_2 <- trial_merc_df %>% split(.$individ_id)
 
 
@@ -192,4 +189,5 @@ for(i in length(dat.list)){
   }
 }
 
+sessionInfo()
 

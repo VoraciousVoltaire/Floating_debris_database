@@ -7,7 +7,9 @@ library(raster)
 library(terra)
 library(dplyr)
 library(tidyverse)
-library(adehabitatHR) # trial basis
+library(adehabitatHR) 
+library(amt)
+library(rnaturalearth)
 
 
 # Working with non-breeding season's data----
@@ -18,11 +20,11 @@ new_data_2 <- readRDS("test_2colonies_individ_info.rds")
 indiv_merged_df <- merge(new_data_1, new_data_2, by = "individ_id")
 relevant_new_data_1 <- dplyr::select(indiv_merged_df, individ_id, timestamp, lon, lat, loc_type, colony)
 relevant_new_data_2 <- relevant_new_data_1 %>% filter(!grepl(c('-04-|-05-|-06-|-07-|-08-|-09-') ,timestamp))
-View(relevant_new_data_2)
 
-# Script- setting an overarching for loop for looping all colonies
+# Condensed script----
+# setting an overarching for loop for looping all colonies; using functions from adehabitatHR package
 setwd('/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/')
-library(adhabitatHR)
+library(adehabitatHR)
 for(i in unique(relevant_new_data_1$colony)){
   sub <- relevant_new_data_1 %>% filter(colony == i, !grepl(c('-04-|-05-|-06-|-07-|-08-|-09-') ,timestamp))
   sub$individ_id <- factor(sub$individ_id, levels = unique(sub$individ_id))
@@ -41,8 +43,60 @@ for(i in unique(relevant_new_data_1$colony)){
   dev.off()
 }
 
-# Use ggsave( paste0("map_timing_",m,".png"))
-
+# setting an overarching for loop for looping all colonies; using functions from amt package
+coupled_countries_all <- ne_countries(scale = 50, country= c("Norway", "Sweden", "Finland", "Russia", "Greenland", "United Kingdom", "Iceland", "Ireland", "Faroe Islands", "Denmark", "Netherlands", "Belgium", "France", "Canada","United States"), returnclass = 'sf')
+plot(coupled_countries_all)
+x <- seq(-5000,5000, by=1.) # resolution is the pixel size you desire 
+y <- seq(-5000, 5000, by=1.)
+xy <- expand.grid(x=x,y=y)
+coordinates(xy) <- ~x+y
+gridded(xy) <- TRUE
+for(i in unique(relevant_new_data_1$colony)){
+  sub <- relevant_new_data_1 %>% filter(colony == i, !grepl(c('-04-|-05-|-06-|-07-|-08-|-09-') ,timestamp))
+  dat.track <- make_track(sub, lon, lat, timestamp, crs = 4326, all_cols = T)
+  dat.mcp <- hr_mcp(dat.track, levels = c(0.5,0.95,1))
+  ggplot() +
+    geom_sf(data = coupled_countries_all) +
+    geom_point(data = sub, aes(lon, lat), alpha = 0.05, size = 1) +
+    geom_sf(data = dat.mcp$mcp, aes(colour = factor(level)), fill = 'transparent', size = 0.75) +
+    scale_colour_viridis_d(direction = -1) +
+    theme_bw() +
+    coord_sf(xlim = c(min(sub$lon) - 5, max(sub$lon) + 5), ylim = c(min(sub$lat) - 5, max(sub$lat) + 5)) # limits can be changed later 
+  ggsave(paste0('renditions_output/loop_outputs/coloured_mcp_',i,'.png'))
+  trast <- make_trast(dat.track)
+  h_pi <- hr_kde_pi(dat.track)
+  dat.kde.pi <- hr_kde(dat.track, trast = trast, h = h_pi, levels = c(0.5,0.95))
+  # plot(dat.kde.pi, col = c("red", "blue"))
+  # png(paste0('renditions_output/loop_outputs/amt_kde_',i,'.png')) 
+  # Warning message:
+  # In KernSmooth::bkde2D(as.matrix(x[, c("x_", "y_")]), bandwidth = h,  :
+  #                         Binning grid too coarse for current (small) bandwidth: consider increasing 'gridsize'
+  kde.hpi.contours <- hr_isopleths(dat.kde.pi)
+  ggplot() +
+    geom_sf(data = coupled_countries_all) +
+    geom_path(data = sub, aes(lon,lat,group = individ_id), alpha = 0.25, size = 0.3) +
+    geom_sf(data = kde.hpi.contours, aes(colour = factor(level)), fill = 'transparent', size = 0.75) +
+    scale_fill_viridis_c() +
+    coord_sf(xlim = c(min(sub$lon) - 5, max(sub$lon) + 5), ylim = c(min(sub$lat) - 5, max(sub$lat) + 5)) # limits can be changed later
+  ggsave(paste0('renditions_output/loop_outputs/amt_all_ind_kde_',i,'.png'))
+  dat.id.kde.hpi <- dat.track %>%
+    split(.$individ_id) %>%
+    map(~hr_kde(.x,
+                trast = make_trast(.x),
+                h = hr_kde_pi(.x),
+                levels = c(0.5, 0.95))) %>%
+    map(hr_isopleths) %>% 
+    do.call(rbind, .)
+  dat.id.kde.hpi <- dat.id.kde.hpi %>%
+    mutate(individ_id = rownames(.), .before = level)
+  ggplot() +
+    geom_sf(data = coupled_countries_all) +
+    geom_path(data = sub, aes(lon, lat, group = individ_id), alpha = 0.25, size = 0.3) +
+    geom_sf(data = dat.id.kde.hpi, aes(color = factor(level)), fill = 'transparent', size = 0.75) +
+    coord_sf(xlim = c(-66, 72), ylim = c(50, 83)) +
+    facet_wrap(~individ_id)
+  ggsave(paste0('renditions_output/loop_outputs/amt_unique_ind_kde_',i,'.png'))
+}
 
 sf_relevant <- st_as_sf(relevant_new_data_1[,c(3,4,6)], coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
 
