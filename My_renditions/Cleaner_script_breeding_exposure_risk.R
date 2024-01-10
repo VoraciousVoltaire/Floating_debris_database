@@ -140,7 +140,6 @@ for(i in 1:11){sd_result[[i]] <- sd(values
                                     , na.rm = T)}
 sd_vector <- as.vector(unlist(sd_result))
 analysis_df_2 <- cbind(analysis_df, Standard_deviation = sd_vector)
-View(analysis_df_2)
 
 # Defining a sample size column in analysis_df_2 ----
 ss_result <- vector("list", 11)
@@ -151,7 +150,6 @@ for(i in 1:11){
 }
 Sample_size <- as.vector(unlist(ss_result))
 analysis_df_2 <- cbind(analysis_df_2, Sample_size)
-View(analysis_df_2)
 transmute_seom <- analysis_df_2 |> transmute(Standard_error_of_mean = Standard_deviation/sqrt(Sample_size))
 analysis_df_2 <- cbind(analysis_df_2, transmute_seom)
 
@@ -188,7 +186,6 @@ for(i in 1:11){
 }
 Sample_size <- as.vector(unlist(ss_result))
 analysis_df_2 <- cbind(analysis_df, Sample_size)
-View(analysis_df_2)
 
 # Normality testing: ----
 
@@ -252,7 +249,6 @@ for(i in 1:11){
 values_vector <- unlist(values_list)
 new_analysis_df <- data.frame(Colony = rep(analysis_df_2$Colony, analysis_df_2$Sample_size),
                               Plastic_debris_value = values_vector)
-View(new_analysis_df)
 
 # Creating a boxplot for easy visualization ----
 

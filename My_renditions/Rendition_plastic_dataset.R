@@ -7,7 +7,7 @@ rm(list=ls())
 
 # Load packages and data ####
 library(raster)
-library(rgdal)
+# library(rgdal)
 library(dplyr)
 library(RColorBrewer)
 library(sf)
@@ -47,6 +47,7 @@ sessionInfo()
 dir.create("outputs/")
 
 #Data to read in ----
+setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/")
 Lebreton <- as.matrix(read.csv("input_data/plastics_data/lebretonmodel_abundance.csv", header = F))
 Maximenko <- as.matrix(read.csv("input_data/plastics_data/maximenkomodel_abundance.csv", header = F))
 VanSeb <- as.matrix(read.csv("input_data/plastics_data/vansebillemodel_abundance.csv", header = F))
@@ -98,7 +99,7 @@ cols$mean <- ifelse(is.na(cols$r180) & is.na(cols$r182),NA,cols$mean)
 
 plastics[cellFromCol(plastics,181)] <- cols$mean
 
-plot(log(plastics))
+plot(plastics)
 
 #save the raster
 raster_name <- "outputs/00_PlasticsRaster.tif"
@@ -155,6 +156,6 @@ plot(world_sp, col="grey75", add=T)
 png("outputs/00_plastics_model_coverage.png", 
     width=1379,height=750)
 plot(sum01_r, col=cols_nmods, breaks = c(-1:3))
-plot(land, col="grey75", add=T)
+# plot(land, col="grey75", add=T)
 dev.off()
 

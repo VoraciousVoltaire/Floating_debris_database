@@ -14,11 +14,12 @@ library(rnaturalearth)
 
 # Working with non-breeding season's data----
 
-setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/input_data/")
+setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/input_data/fulmars_project_data/")
 new_data_1 <- readRDS("test_2colonies.rds")
 new_data_2 <- readRDS("test_2colonies_individ_info.rds")
 indiv_merged_df <- merge(new_data_1, new_data_2, by = "individ_id")
 relevant_new_data_1 <- dplyr::select(indiv_merged_df, individ_id, timestamp, lon, lat, loc_type, colony)
+df <- st_as_sf(relevant_new_data_1, coords = c('lon','lat'), crs = 4326)
 relevant_new_data_2 <- relevant_new_data_1 %>% filter(!grepl(c('-04-|-05-|-06-|-07-|-08-|-09-') ,timestamp))
 
 # Condensed script----
@@ -27,7 +28,6 @@ setwd('/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulma
 library(adehabitatHR)
 for(i in unique(relevant_new_data_1$colony)){
   sub <- relevant_new_data_1 %>% filter(colony == i, !grepl(c('-04-|-05-|-06-|-07-|-08-|-09-') ,timestamp))
-  sub$individ_id <- factor(sub$individ_id, levels = unique(sub$individ_id))
   sub_sf <- st_as_sf(sub, coords = c("lon", "lat"), crs = 4326)
   sub_coords <- sub[,c("lon", "lat")]
   sub_spdf <- SpatialPointsDataFrame(coords = sub_coords, data = sub, proj4string = CRS('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'))
@@ -37,26 +37,36 @@ for(i in unique(relevant_new_data_1$colony)){
   png(paste0('renditions_output/loop_outputs/kernel_image_',i,'.png'), width = 1379, height = 750)
   plot(unlist(image(kernel)))
   ud <- getverticeshr(kernel, percent = 95)
+  print(ud)
   ud_sf <- st_as_sf(ud)
   png(paste0('renditions_output/loop_outputs/UD_image_',i,'.png'), width = 1379, height = 750)
   plot(st_geometry(ud_sf[1,]))
+  png(paste0('renditions_output/loop_outputs/coloured_UD_image',i,'.png'), width = 1379, height = 750)
+  ud@data$id <- as.factor(ud@data$id)
+  plot(ud, col = ud@data$id)
   dev.off()
 }
 
 # setting an overarching for loop for looping all colonies; using functions from amt package
-coupled_countries_all <- ne_countries(scale = 50, country= c("Norway", "Sweden", "Finland", "Russia", "Greenland", "United Kingdom", "Iceland", "Ireland", "Faroe Islands", "Denmark", "Netherlands", "Belgium", "France", "Canada","United States"), returnclass = 'sf')
-plot(coupled_countries_all)
-x <- seq(-5000,5000, by=1.) # resolution is the pixel size you desire 
-y <- seq(-5000, 5000, by=1.)
-xy <- expand.grid(x=x,y=y)
-coordinates(xy) <- ~x+y
-gridded(xy) <- TRUE
+# coupled_countries_all <- ne_countries(scale = 50, country= c("Norway", "Sweden", "Finland", "Russia", "Greenland", "United Kingdom", "Iceland", "Ireland", "Faroe Islands", "Denmark", "Netherlands", "Belgium", "France", "Canada","United States"), returnclass = 'sf')
+# x <- seq(-5000,5000, by=1.) # resolution is the pixel size you desire 
+# y <- seq(-5000, 5000, by=1.)
+# xy <- expand.grid(x=x,y=y)
+# coordinates(xy) <- ~x+y
+# gridded(xy) <- TRUE
 for(i in unique(relevant_new_data_1$colony)){
   sub <- relevant_new_data_1 %>% filter(colony == i, !grepl(c('-04-|-05-|-06-|-07-|-08-|-09-') ,timestamp))
+  # medlat <- median(sub$lat)
+  # medlon <- median(sub$lon)
+  # sub <- st_as_sf(sub, coords = c('lon', 'lat'), crs = 4326) 
+  # sub <- st_transform(sub, crs = CRS(paste("+proj=laea +lat_0=",medlat," +lon_0=",medlon," +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=km ", sep = "")))
+  # sub <- sub %>% mutate(lon = st_coordinates(.)[,1], lat = st_coordinates(.)[,2])
+  # sub <- st_set_geometry(sub, NULL)
+  # sub_crs <-CRS(paste("+proj=laea +lat_0=",median(sub$lat)," +lon_0=",median(sub$lon)," +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=km ", sep = ""))
   dat.track <- make_track(sub, lon, lat, timestamp, crs = 4326, all_cols = T)
   dat.mcp <- hr_mcp(dat.track, levels = c(0.5,0.95,1))
   ggplot() +
-    geom_sf(data = coupled_countries_all) +
+    geom_sf(data = ne_countries(scale = 50)) +
     geom_point(data = sub, aes(lon, lat), alpha = 0.05, size = 1) +
     geom_sf(data = dat.mcp$mcp, aes(colour = factor(level)), fill = 'transparent', size = 0.75) +
     scale_colour_viridis_d(direction = -1) +
@@ -73,8 +83,8 @@ for(i in unique(relevant_new_data_1$colony)){
   #                         Binning grid too coarse for current (small) bandwidth: consider increasing 'gridsize'
   kde.hpi.contours <- hr_isopleths(dat.kde.pi)
   ggplot() +
-    geom_sf(data = coupled_countries_all) +
-    geom_path(data = sub, aes(lon,lat,group = individ_id), alpha = 0.25, size = 0.3) +
+    geom_sf(data = ne_countries(scale = 50)) +
+    geom_path(data = data.frame(sub), aes(lon, lat, group = individ_id), alpha = 0.25, size = 0.3) +
     geom_sf(data = kde.hpi.contours, aes(colour = factor(level)), fill = 'transparent', size = 0.75) +
     scale_fill_viridis_c() +
     coord_sf(xlim = c(min(sub$lon) - 5, max(sub$lon) + 5), ylim = c(min(sub$lat) - 5, max(sub$lat) + 5)) # limits can be changed later
@@ -90,10 +100,11 @@ for(i in unique(relevant_new_data_1$colony)){
   dat.id.kde.hpi <- dat.id.kde.hpi %>%
     mutate(individ_id = rownames(.), .before = level)
   ggplot() +
-    geom_sf(data = coupled_countries_all) +
+    geom_sf(data = ne_countries(scale = 50)) +
     geom_path(data = sub, aes(lon, lat, group = individ_id), alpha = 0.25, size = 0.3) +
     geom_sf(data = dat.id.kde.hpi, aes(color = factor(level)), fill = 'transparent', size = 0.75) +
-    coord_sf(xlim = c(-66, 72), ylim = c(50, 83)) +
+    scale_fill_viridis_c() +
+    coord_sf(xlim = c(min(sub$lon) - 10, max(sub$lon) + 10), ylim = c(min(sub$lat) - 10, max(sub$lat) + 10)) +
     facet_wrap(~individ_id)
   ggsave(paste0('renditions_output/loop_outputs/amt_unique_ind_kde_',i,'.png'))
 }
