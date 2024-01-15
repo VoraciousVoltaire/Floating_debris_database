@@ -28,7 +28,7 @@ relevant_new_data_2 <- relevant_new_data_1 %>% filter(!grepl(c('-04-|-05-|-06-|-
 land <- as(world, "Spatial")
 
 # Setting up a directory and object for feasibility----
-dir_kernels <- "/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/renditions_output/trial_outputs"
+dir_kernels <- "/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/renditions_output"
 proj_wgs84 <- sp::CRS(sp::proj4string(land))
 
 # Setting a null grid----
@@ -77,10 +77,11 @@ tracks <- sp::spTransform(relevant_new_data_2, CRS = DgProj)
 tracks$individ_id <- factor(tracks$individ_id)
 
 # For loop for calculating kde----
-# Encountered issue: the graphs are the same for both the colonies 
 
 # Working loop!!!!!!!!!!!!!!!!!
 setwd(dir_kernels)
+
+
 for(i in unique(relevant_new_data_2$colony)){
   sub <- as.data.frame(relevant_new_data_2) %>% filter(colony == i)
   sp::coordinates(sub) <- ~ lon + lat
@@ -91,54 +92,98 @@ for(i in unique(relevant_new_data_2$colony)){
   kudl <- kernelUD(tracks[,"individ_id"], grid = null.grid, h = 200000) ## smoothing factor equals 200 km for GLS data
   vud <- adehabitatHR::getvolumeUD(kudl)
   
+  fud <- vector("list", length(unique(sub$individ_id)))
+  hr95_cumulative <- data.frame(matrix(NA, nrow = 932694))
+  
+  for(j in 1:length(unique(sub$individ_id))){
+    fud <- vud[[j]]
+    hr95 <- as.data.frame(fud)[,1]
+    hr95 <- as.numeric(hr95 <= 95)
+    hr95 <- data.frame(hr95)
+    colnames(hr95) <- paste0(unique(sub$individ_id)[j])
+    hr95_cumulative <- cbind(hr95_cumulative, hr95)
+  }
+  
+    hr95_mod <- hr95_cumulative[,-1]
+    coordinates(hr95_mod) <- coordinates(fud)
+    sp::gridded(hr95_mod) <- TRUE
+  
+  
+  #} # temporary break 
+  
+  # note
+  # sample <- as.vector(unlist(vud))
+  # range(vud[[1]]$n)
+  # #note
+  
+  
   # Additions now
   
   setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/renditions_output/")
   
-  for(j in 1:length(kudl)){
-    par(mfrow = c(2,1))
-    xyz <- as.image.SpatialGridDataFrame(kudl[[j]])
-    xyzv <- as.image.SpatialGridDataFrame(vud[[j]])
-    # plot(unlist(image(kudl[[j]])))
-   
-    image(kudl[[j]])
-    title("Output of kernelUD")
-    contour(xyz, add = T)
-   
-    image(vud[[j]])
-    title("Output of getvolumeUD")
-    contour(xyzv, add = T)
-  }
+  # for(j in 1:length(kudl)){
+  #   par(mfrow = c(2,1))
+  #   xyz <- as.image.SpatialGridDataFrame(kudl[[j]])
+  #   xyzv <- as.image.SpatialGridDataFrame(vud[[j]])
+  #   # plot(unlist(image(kudl[[j]])))
+  #  
+  #   image(kudl[[j]])
+  #   title("Output of kernelUD")
+  #   contour(xyz, add = T)
+  #  
+  #   image(vud[[j]])
+  #   title("Output of getvolumeUD")
+  #   contour(xyzv, add = T)
+  # }
   
   # Additions end
+
+  # fud <- vector("list", length(unique(sub$individ_id)))
+  # hr95 <- vector("list", length(unique(sub$individ_id)))
+  # for(p in 1:length(unique(sub$individ_id))){
+  #   class(vud[[p]])
+  #   hr95 <- as.data.frame(fud[[p]][,1])
+  # }
+  # View(as.data.frame(estUDm2spixdf(vud)[,2]))
   
-  fud <- vud[[1]] # didn't understand why; shall figure out- as the loop is running, the first animal just means the consecutive animal ID
-  hr95 <- as.data.frame(fud)[,1]
-  hr95 <- as.numeric(hr95 <= 95)
-  hr95 <- data.frame(hr95)
-  coordinates(hr95) <- coordinates(fud) 
-  sp::gridded(hr95) <- TRUE
   
-  # Additions start here
+  #  # didn't understand why; shall figure out
+  # hr95 <- as.data.frame(fud)[,1]
+  # hr95 <- as.numeric(hr95 <= 95)
+  # hr95 <- data.frame(hr95)
+  # coordinates(hr95) <- coordinates(fud) 
+  # sp::gridded(hr95) <- TRUE
+  # 
+  # # Additions start here
+  # 
+  # image(hr95)
   
-  image(hr95)
+  # I still have to figure out how to modify my new hr95 to get a 95% home range for each individual. Shouldn't be too hard, just have to find the right argument. 
+  # And it's crucial to change it from 100 to 95 so that externalities are dealt with in a better manner
   
   # Additions end here
   
-  kern95 <- adehabitatHR::estUDm2spixdf(kudl)
+  volume100 <- adehabitatHR:: estUDm2spixdf(vud)
+  kern100 <- adehabitatHR::estUDm2spixdf(kudl)
+    
+  kern100_stk <- raster::stack(kern100)
+  kern100_stk_mean <- terra::mean(kern100_stk, na.rm = T) # for some reason, median wasn't working
   
-  stk_100 <- raster::stack(kern95)
-  stk_95 <- raster::stack(hr95)
+  volume95_stk <- raster::stack(hr95_mod)
+  volume95_stk_mean <- terra::mean(volume95_stk, na.rm = T)
   
-  sum_all_100 <- stk_100[[1]]
-  sum_all_95 <- stk_95[[1]]
+  volume100_stk <- raster::stack(volume100)
+  volume100_stk_mean <- terra::mean(volume100_stk, na.rm = T)
   
-  sum_all_raw <- sum_all_100*sum_all_95
+  sum_all_raw <- kern100_stk_mean * volume95_stk_mean
   
-  rast <- sum_all_raw/sum(raster::getValues(sum_all_raw))
+  # sum_all_raw <- sum_all_100[[k]] * sum_all_95[[k]]
+  # s <- as.data.frame(as.vector(values(sum_all_raw)))
+  # sum(s)
+  
+  
+  rast <- sum_all_raw / sum(raster::getValues(sum_all_raw))
   rast[rast == 0] <- NA
-  
-  KDERasName_sum <- paste0("", i, ".tif")
   
   x.matrix <- is.na(as.matrix(rast))
   colNotNA <- which(colSums(x.matrix) != nrow(rast))
@@ -162,22 +207,26 @@ for(i in unique(relevant_new_data_2$colony)){
   rast_mask <- rast_mask_na
   rast_mask[is.na(rast_mask)] <- 0
   rast_mask_sum1 <- rast_mask/sum(raster::getValues(rast_mask))
-  #rast_mask[rast_mask == 0] <- NA
+  rast_mask[rast_mask == 0] <- NA
   rast_mask_final <- raster::mask(rast_mask_sum1, mask_proj_pol, inverse = TRUE)
   rast_mask_final2 <- rast_mask_final 
   
   #PLOT & SAVE ####
   mask_wgs84 <- raster::projectRaster(rast_mask_final2, crs = proj_wgs84, over = F)
-  setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/renditions_output/trial_outputs")
-  raster::writeRaster(mask_wgs84, filename = KDERasName_sum,
+  setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/renditions_output/revised_script_12_1/")
+  raster::writeRaster(mask_wgs84, filename = paste0("", i, ".tif"),
                       format = "GTiff", overwrite = T)
   
   ## Plot
-  png(filename = paste0("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/renditions_output/trial_outputs/trial_", i, ".png"))
+  png(filename = paste0("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/renditions_output/revised_script_12_1/trial_", i, ".png"))
   plot(mask_wgs84)
   plot(land, add = T, col = "#66000000")
   dev.off()
 }
+
+
+
+
 
 
 

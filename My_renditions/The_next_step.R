@@ -1,6 +1,3 @@
-# Clear environment
-
-rm(list = ls())
 
 # Install necessary packages----
 
@@ -48,27 +45,29 @@ df <- st_as_sf(relevant_new_data_1, coords = c('lon','lat'), crs = 4326)
 relevant_new_data_2 <- relevant_new_data_1 %>% filter(!grepl(c('-04-|-05-|-06-|-07-|-08-|-09-') ,timestamp))
 
 # Too advanced for me right now; I'd first have to bring the tif figures that I've got which represent the volume rasters from getvolumeUD
-setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/")
+setwd("/Users/ameydanole/Desktop/ENS_Rennes/argh/Microplastic_ingestion_by_fulmarus_glacialis/1_full_analysis_petrels/renditions_output/")
 for(i in unique(relevant_new_data_2$colony)){
-  sub <- raster(paste0("renditions_output/trial_outputs/",i,".tif"))
-  plot(sub) # you could add sf coordinates over here by doing a ggplot; the question is how do I know the x and y coordinates? 
+  sub <- raster(paste0("revised_script_12_1/",i,".tif"))
+  plot(sub) 
   Sys.sleep(2)
 }
+
+par(mfrow=c(1,1))
 
 # Trying a ggplot- ggplot's really messing up these rasters. If I run individual lines of a loop, it's working fine but the computational power is lacking to graph looped outputs it seems.
 # Okay, my bad. Just had to take the plastics_dup line inside the loop
 
 j <- 1
 npers <- vector("list", length(unique(relevant_new_data_2$colony)))
+pers <- vector("list", length(unique(relevant_new_data_2$colony)))
 for(i in unique(relevant_new_data_2$colony)){
   # no_of_iterations <- 0
-  sub <- raster(paste0("renditions_output/trial_outputs/",i,".tif"))
+  sub <- raster(paste0("revised_script_12_1/",i,".tif"))
   sub.df <- as.data.frame(sub, xy = T)
   colnames(sub.df) <- c("x","y","kernelUDvolume")
   plastics_dup <- plastics
   plastics_dup <- projectRaster(plastics_dup, crs = crs(sub))
   plastics_dup <- resample(plastics_dup, sub, method = "bilinear")
-  plot(plastics_dup)
   plastics_dup.df <- as.data.frame(plastics_dup, xy = T)
   colnames(plastics_dup.df) <- c("x","y","Value")
   
@@ -110,7 +109,7 @@ for(i in unique(relevant_new_data_2$colony)){
   # }
   
   # Sys.sleep(2)
-  ggsave(paste0('renditions_output/loop_outputs/overlapped_rasters_',i,'.png'))
+  ggsave(paste0('revised_script_12_1/loop_outputs/overlapped_rasters_',i,'.png'))
   
   new_raster <- plastics_dup * sub
   new_raster_df <- as.data.frame(new_raster, xy = T)
@@ -121,10 +120,12 @@ for(i in unique(relevant_new_data_2$colony)){
                             as.vector(new_raster@extent)[2]) - 3, 
                    ylim = c(as.vector(new_raster@extent)[3] + 1, 
                             as.vector(new_raster@extent)[4] - 1)))
-  ggsave(paste0('renditions_output/loop_outputs/multiplication_raster_',i,'.png'))
+  ggsave(paste0('revised_script_12_1/loop_outputs/multiplication_raster_',i,'.png'))
         
   npers[[j]] <- median(new_raster_df$Value, na.rm = T)
   print(npers[[j]])
+  # Creating a dataset which stores these multiplicated values to run regression analysis
+  pers[[j]] <- as.vector(na.omit(new_raster_df$Value))
   j <- j + 1 
   
   
@@ -147,7 +148,11 @@ for(i in unique(relevant_new_data_2$colony)){
   # }
 }
 
-Analysis_df <- data.frame("Colonies" = unique(relevant_new_data_2$colony), "Plastic exposure risk score" = as.vector(unlist(npers)))
+Pseudo_analysis_df <- data.frame("Colonies" = unique(relevant_new_data_2$colony), "Plastic exposure risk score" = as.vector(unlist(npers)))
+View(Pseudo_analysis_df)
+
+# I'm getting erroneous graphs after this
+# Next steps: change the crs, ocrrect ggplot extents, merge data frames, figure out hr95
 
 
 
